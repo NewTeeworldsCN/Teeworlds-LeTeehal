@@ -313,10 +313,12 @@ void CCharacter::FireWeapon()
 				else
 					Dir = vec2(0.f, -1.f);
 
-				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
+				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, 1,
 					m_pPlayer->GetCID(), m_ActiveWeapon);
 				Hits++;
 			}
+
+			PickupScrap();
 
 			// if we Hit anything, we have to wait for the reload
 			if(Hits)
@@ -338,13 +340,13 @@ void CCharacter::FireWeapon()
 
 		case WEAPON_SHOTGUN:
 		{
-			int ShotSpread = 2;
+			int ShotSpread = 1;
 
 			for(int i = -ShotSpread; i <= ShotSpread; ++i)
 			{
-				float Spreading[] = {-0.185f, -0.070f, 0, 0.070f, 0.185f};
+				float Spreading[] = {-0.070f, 0, 0.070f};
 				float a = GetAngle(Direction);
-				a += Spreading[i+2];
+				a += Spreading[i+1];
 				float v = 1-(absolute(i)/(float)ShotSpread);
 				float Speed = mix((float)GameServer()->Tuning()->m_ShotgunSpeeddiff, 1.0f, v);
 				CProjectile *pProj = new CProjectile(GameWorld(), WEAPON_SHOTGUN,
@@ -520,13 +522,19 @@ void CCharacter::Tick()
 	{
 		char Buf[128];
 		str_format(Buf, sizeof(Buf), "You were moved to %s due to team balancing", GameServer()->m_pController->GetTeamName(m_pPlayer->GetTeam()));
-		GameServer()->SendBroadcast(Buf, m_pPlayer->GetCID());
+		GameServer()->SendBroadcast(m_pPlayer->GetCID(), BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, Buf);
 
 		m_pPlayer->m_ForceBalanced = false;
 	}
 
+	UpdateTuningParam();
+
 	m_Core.m_Input = m_Input;
-	m_Core.Tick(true);
+
+	CCharacterCore::CParams CoreTickParams(&m_pPlayer->m_NextTuningParams);
+
+	vec2 PrevPos = m_Core.m_Pos;
+	m_Core.Tick(true, &CoreTickParams);
 
 	// handle death-tiles and leaving gamelayer
 	if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
@@ -550,19 +558,22 @@ void CCharacter::TickDefered()
 {
 	// advance the dummy
 	{
+		CCharacterCore::CParams CoreTickParams(&GameWorld()->m_Core.m_Tuning);
 		CWorldCore TempWorld;
 		m_ReckoningCore.Init(&TempWorld, GameServer()->Collision());
-		m_ReckoningCore.Tick(false);
-		m_ReckoningCore.Move();
+		m_ReckoningCore.Tick(false, &CoreTickParams);
+		m_ReckoningCore.Move(&CoreTickParams);
 		m_ReckoningCore.Quantize();
 	}
+
+	CCharacterCore::CParams CoreTickParams(&m_pPlayer->m_NextTuningParams);
 
 	//lastsentcore
 	vec2 StartPos = m_Core.m_Pos;
 	vec2 StartVel = m_Core.m_Vel;
 	bool StuckBefore = GameServer()->Collision()->TestBox(m_Core.m_Pos, vec2(28.0f, 28.0f));
 
-	m_Core.Move();
+	m_Core.Move(&CoreTickParams);
 	bool StuckAfterMove = GameServer()->Collision()->TestBox(m_Core.m_Pos, vec2(28.0f, 28.0f));
 	m_Core.Quantize();
 	bool StuckAfterQuant = GameServer()->Collision()->TestBox(m_Core.m_Pos, vec2(28.0f, 28.0f));
@@ -689,6 +700,7 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
+	m_pPlayer->RandomChooseClass();
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
@@ -842,4 +854,42 @@ void CCharacter::Snap(int SnappingClient)
 	}
 
 	pCharacter->m_PlayerFlags = GetPlayer()->m_PlayerFlags;
+}
+
+void CCharacter::PickupScrap()
+{
+	if(!IsAlive() || m_ReloadTimer)
+		return;
+
+	for(auto *pDrop = (CScrap*) GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pDrop; pDrop = (CScrap*) pDrop->TypeNext()) {
+        if (pDrop) {
+            if (distance(pDrop->m_Pos, m_Pos) < (pDrop->GetWeight()*2)+8) {
+                m_ReloadTimer = Server()->TickSpeed();
+                if (pDrop->Pickup(GetPlayer()->GetCID())) {
+					GameServer()->CreateHammerHit(pDrop->m_Pos);
+                    pDrop->m_Hide = true;
+					int Value = pDrop->GetScrapValue();
+					GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{str:iname},价值{int:value}元"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void CCharacter::UpdateTuningParam()
+{
+	CTuningParams pTuningParams = m_pPlayer->m_NextTuningParams;
+	if(m_pPlayer->m_Weight)
+	{
+		int Weight = m_pPlayer->m_Weight;
+		float Factor = 1.0f - ((float)Weight / 200);
+		float FactorSpeed = 1.0f - ((float)Weight / 200);
+		float FactorAccel = 1.0f - ((float)Weight / 200);
+		m_pPlayer->m_NextTuningParams.m_GroundControlSpeed = pTuningParams.m_GroundControlSpeed * Factor;
+		m_pPlayer->m_NextTuningParams.m_GroundJumpImpulse = pTuningParams.m_GroundJumpImpulse * Factor;
+		m_pPlayer->m_NextTuningParams.m_AirJumpImpulse = pTuningParams.m_AirJumpImpulse * Factor;
+		m_pPlayer->m_NextTuningParams.m_AirControlSpeed = pTuningParams.m_AirControlSpeed * Factor;
+		m_pPlayer->m_NextTuningParams.m_Gravity = (0.5f + (Weight/400));
+	}
 }

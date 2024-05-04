@@ -3,7 +3,7 @@
 #include <new>
 #include <engine/shared/config.h>
 #include "player.h"
-
+#include "classes.h"
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
@@ -24,6 +24,11 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	SetLanguage(Server()->GetClientLanguage(ClientID));
 
 	m_Authed = IServer::AUTHED_NO;
+
+	m_PrevTuningParams = *pGameServer->Tuning();
+	m_NextTuningParams = m_PrevTuningParams;
+
+	m_Class = PLAYERCLASS_HUMAN;
 }
 
 CPlayer::~CPlayer()
@@ -95,6 +100,8 @@ void CPlayer::Tick()
 		++m_LastActionTick;
 		++m_TeamChangeTick;
  	}
+
+	HandleTuningParams();
 }
 
 void CPlayer::PostTick()
@@ -127,12 +134,51 @@ void CPlayer::Snap(int SnappingClient)
 		return;
 
 	StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
-	StrToInts(&pClientInfo->m_Clan0, 3, Server()->ClientClan(m_ClientID));
 	pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
-	StrToInts(&pClientInfo->m_Skin0, 6, m_TeeInfos.m_SkinName);
-	pClientInfo->m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
-	pClientInfo->m_ColorBody = m_TeeInfos.m_ColorBody;
-	pClientInfo->m_ColorFeet = m_TeeInfos.m_ColorFeet;
+	pClientInfo->m_UseCustomColor = 1;
+	pClientInfo->m_ColorBody = 0000000;
+	pClientInfo->m_ColorFeet = 0000000;
+	switch (m_Class)
+	{
+	case PLAYERCLASS_HUMAN:
+		StrToInts(&pClientInfo->m_Skin0, 6, "twintri");
+		StrToInts(&pClientInfo->m_Clan0, 3, "研究员");
+		pClientInfo->m_ColorBody = 3276544;
+		pClientInfo->m_ColorFeet = 3276544;
+		break;
+
+	case PLAYERCLASS_HOARDINGBUG:
+		StrToInts(&pClientInfo->m_Skin0, 6, "mouse");
+		StrToInts(&pClientInfo->m_Clan0, 3, "囤积虫");
+		break;
+
+	case PLAYERCLASS_BUNKERSPIDER:
+		StrToInts(&pClientInfo->m_Skin0, 6, "nersif");
+		StrToInts(&pClientInfo->m_Clan0, 3, "蜘蛛");
+		break;
+
+	case PLAYERCLASS_NUTCRACKER:
+		StrToInts(&pClientInfo->m_Skin0, 6, "antiantey");
+		StrToInts(&pClientInfo->m_Clan0, 3, "英卫队");
+		break;
+
+	case PLAYERCLASS_THUMPER:
+		StrToInts(&pClientInfo->m_Skin0, 6, "coala_x_ninja");
+		StrToInts(&pClientInfo->m_Clan0, 3, "半身鱼");
+		break;
+	
+	case PLAYERCLASS_SNAREFLEA:
+		StrToInts(&pClientInfo->m_Skin0, 6, "hammie-chew");
+		StrToInts(&pClientInfo->m_Clan0, 3, "抱脸虫");
+		break;
+
+	case PLAYERCLASS_BRACKEN:
+		StrToInts(&pClientInfo->m_Skin0, 6, "beast");
+		StrToInts(&pClientInfo->m_Clan0, 3, "小黑");
+		break;
+	default:
+		break;
+	}
 
 	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
 	if(!pPlayerInfo)
@@ -303,4 +349,35 @@ const char* CPlayer::GetLanguage()
 void CPlayer::SetLanguage(const char* pLanguage)
 {
 	str_copy(m_aLanguage, pLanguage, sizeof(m_aLanguage));
+}
+
+void CPlayer::ResetScraps()
+{
+	m_vScraps.clear();
+	GameServer()->ResetVotes(GetCID());
+}
+
+void CPlayer::HandleTuningParams()
+{
+	if(!(m_PrevTuningParams == m_NextTuningParams))
+	{
+		if(m_IsReady)
+		{
+			CMsgPacker Msg(NETMSGTYPE_SV_TUNEPARAMS);
+			int *pParams = (int *)&m_NextTuningParams;
+			for(unsigned i = 0; i < sizeof(m_NextTuningParams)/sizeof(int); i++)
+				Msg.AddInt(pParams[i]);
+			Server()->SendMsg(&Msg, MSGFLAG_VITAL, GetCID());
+		}
+		
+		m_PrevTuningParams = m_NextTuningParams;
+	}
+	
+	m_NextTuningParams = *GameServer()->Tuning();
+}
+
+void CPlayer::RandomChooseClass()
+{
+	int Class = (rand()%(NUM_PLAYERCLASS-1))+1;
+	m_Class = Class;
 }

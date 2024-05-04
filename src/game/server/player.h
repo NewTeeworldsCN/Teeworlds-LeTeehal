@@ -6,6 +6,9 @@
 // this include should perhaps be removed
 #include "entities/character.h"
 #include "gamecontext.h"
+#include "scrap-info.h"
+
+#include <vector>
 
 // player object
 class CPlayer
@@ -101,6 +104,18 @@ public:
 
 	int m_Authed;
 
+	std::vector<Scrap *> m_vScraps;
+	void ResetScraps();
+
+	int m_Weight;
+
+	CTuningParams m_PrevTuningParams;
+	CTuningParams m_NextTuningParams;
+
+	void HandleTuningParams();
+
+	int m_Class;
+	void RandomChooseClass();
 private:
 	CCharacter *m_pCharacter;
 	CGameContext *m_pGameServer;

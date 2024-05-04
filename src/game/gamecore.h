@@ -34,6 +34,14 @@ public:
 		#undef MACRO_TUNING_PARAM
 	}
 
+	bool operator==(const CTuningParams& TuningParams)
+	{
+		#define MACRO_TUNING_PARAM(Name,ScriptName,Value) if(m_##Name != TuningParams.m_##Name) return false;
+		#include "tuning.h"
+		#undef MACRO_TUNING_PARAM
+		return true;
+	}
+
 	static const char *m_apNames[];
 
 	#define MACRO_TUNING_PARAM(Name,ScriptName,Value) CTuneParam m_##Name;
@@ -177,6 +185,20 @@ class CCharacterCore
 	CWorldCore *m_pWorld;
 	CCollision *m_pCollision;
 public:
+	struct CParams : public CTuningParams
+	{
+		const CTuningParams* m_pTuningParams;
+		int m_HookMode;
+		int m_HookGrabTime;
+		
+		CParams(const CTuningParams* pTuningParams)
+		{
+			m_pTuningParams = pTuningParams;
+			m_HookMode = 0;
+			m_HookGrabTime = SERVER_TICK_SPEED+SERVER_TICK_SPEED/5;
+		}
+	};
+
 	vec2 m_Pos;
 	vec2 m_Vel;
 
@@ -196,8 +218,8 @@ public:
 
 	void Init(CWorldCore *pWorld, CCollision *pCollision);
 	void Reset();
-	void Tick(bool UseInput);
-	void Move();
+	void Tick(bool UseInput, CParams* pParams);
+	void Move(CParams* pParams);
 
 	void Read(const CNetObj_CharacterCore *pObjCore);
 	void Write(CNetObj_CharacterCore *pObjCore);

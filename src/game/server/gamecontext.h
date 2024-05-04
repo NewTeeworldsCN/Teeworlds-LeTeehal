@@ -17,6 +17,8 @@
 #include "gameworld.h"
 #include "player.h"
 
+#include "scrap-info.h"
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -38,6 +40,20 @@
 			All players (CPlayer::snap)
 
 */
+
+#define BROADCAST_DURATION_REALTIME (0)
+#define BROADCAST_DURATION_GAMEANNOUNCE (Server()->TickSpeed() * 2)
+
+enum
+{
+	BROADCAST_PRIORITY_LOWEST = 0,
+	BROADCAST_PRIORITY_WEAPONSTATE,
+	BROADCAST_PRIORITY_EFFECTSTATE,
+	BROADCAST_PRIORITY_GAMEANNOUNCE,
+	BROADCAST_PRIORITY_SERVERANNOUNCE,
+	BROADCAST_PRIORITY_INTERFACE,
+};
+
 class CGameContext : public IGameServer
 {
 	IServer *m_pServer;
@@ -46,6 +62,7 @@ class CGameContext : public IGameServer
 	CCollision m_Collision;
 	CNetObjHandler m_NetObjHandler;
 	CTuningParams m_Tuning;
+	CScrapInfo m_ScrapInfo;
 
 	static void ConsoleOutputCallback_Chat(const char *pStr, void *pUser);
 
@@ -84,6 +101,7 @@ public:
 	class IConsole *Console() { return m_pConsole; }
 	CCollision *Collision() { return &m_Collision; }
 	CTuningParams *Tuning() { return &m_Tuning; }
+	CScrapInfo *ScrapInfo() { return &m_ScrapInfo; }
 
 	CGameContext();
 	~CGameContext();
@@ -93,7 +111,7 @@ public:
 	CEventHandler m_Events;
 	CPlayer *m_apPlayers[MAX_CLIENTS];
 
-	IGameController *m_pController;
+	CGameController *m_pController;
 	CGameWorld m_World;
 
 	// helper functions
@@ -150,8 +168,10 @@ public:
 	void SendChat(int ClientID, int Team, const char *pText);
 	void SendEmoticon(int ClientID, int Emoticon);
 	void SendWeaponPickup(int ClientID, int Weapon);
-	void SendBroadcast(const char *pText, int ClientID);
+	void SendBroadcast(int ClientID, int Priority, int LifeSpan, const char *pText, ...);
 	void SetClientLanguage(int ClientID, const char *pLanguage);
+
+	void AddBroadcast(int ClientID, const char *pText, int Priority, int LifeSpan);
 
 
 
@@ -188,6 +208,31 @@ public:
 	virtual const char *GameType();
 	virtual const char *Version();
 	virtual const char *NetVersion();
+
+	struct CVoteOptions
+	{
+		char m_aDescription[VOTE_DESC_LENGTH] = {0};
+		char m_aCommand[VOTE_CMD_LENGTH] = {0};
+	};
+	array<CVoteOptions> m_aPlayerVotes[MAX_CLIENTS];
+
+	void ResetVotes(int ClientID);
+	void AddVote(int To, const char *aCmd, const char *pText, ...);
+
+	class CBroadcastState
+	{
+	public:
+		int m_NoChangeTick;
+		char m_aPrevMessage[1024];
+
+		int m_Priority;
+		char m_aNextMessage[1024];
+
+		int m_LifeSpanTick;
+		int m_TimedPriority;
+		char m_aTimedMessage[1024];
+	};
+	CBroadcastState m_aBroadcastStates[MAX_PLAYER];
 };
 
 inline int CmaskAll() { return -1; }

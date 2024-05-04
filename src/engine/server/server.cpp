@@ -354,13 +354,6 @@ void CServer::SetClientName(int ClientID, const char *pName)
 	char aCleanName[MAX_NAME_LENGTH];
 	str_copy(aCleanName, pName, sizeof(aCleanName));
 
-	// clear name
-	for(char *p = aCleanName; *p; ++p)
-	{
-		if(*p < 32)
-			*p = ' ';
-	}
-
 	if(TrySetClientName(ClientID, aCleanName))
 	{
 		// auto rename
@@ -513,7 +506,7 @@ int CServer::ClientCountry(int ClientID)
 
 bool CServer::ClientIngame(int ClientID)
 {
-	return ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME;
+	return ClientID >= 0 && ClientID < MAX_PLAYER && m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME;
 }
 
 int CServer::MaxClients() const
@@ -558,7 +551,7 @@ int CServer::SendMsgEx(CMsgPacker *pMsg, int Flags, int ClientID, bool System)
 		{
 			// broadcast
 			int i;
-			for(i = 0; i < MAX_CLIENTS; i++)
+			for(i = 0; i < MAX_PLAYER; i++)
 				if(m_aClients[i].m_State == CClient::STATE_INGAME)
 				{
 					Packet.m_ClientID = i;
@@ -774,7 +767,7 @@ void CServer::SendRconLineAuthed(const char *pLine, void *pUser)
 	if(ReentryGuard) return;
 	ReentryGuard++;
 
-	for(i = 0; i < MAX_CLIENTS; i++)
+	for(i = 0; i < MAX_PLAYER; i++)
 	{
 		if(pThis->m_aClients[i].m_State != CClient::STATE_EMPTY && pThis->m_aClients[i].m_Authed >= pThis->m_RconAuthLevel)
 			pThis->SendRconLine(i, pLine);
@@ -801,7 +794,7 @@ void CServer::SendRconCmdRem(const IConsole::CCommandInfo *pCommandInfo, int Cli
 
 void CServer::UpdateClientRconCommands()
 {
-	int ClientID = Tick() % MAX_CLIENTS;
+	int ClientID = Tick() % MAX_PLAYER;
 
 	if(m_aClients[ClientID].m_State != CClient::STATE_EMPTY && m_aClients[ClientID].m_Authed)
 	{
@@ -1111,7 +1104,7 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token)
 
 	// count the players
 	int PlayerCount = 0, ClientCount = 0;
-	for(int i = 0; i < MAX_CLIENTS; i++)
+	for(int i = 0; i < VANILLA_MAX_PLAYER; i++)
 	{
 		if(m_aClients[i].m_State != CClient::STATE_EMPTY)
 		{
@@ -1129,7 +1122,12 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token)
 	p.AddString(aBuf, 6);
 
 	p.AddString(GameServer()->Version(), 32);
-	p.AddString(g_Config.m_SvName, 64);
+
+	char aName[64];
+	str_copy(aName, g_Config.m_SvName, sizeof(aName));
+	if(ClientCount >= VANILLA_MAX_PLAYER && ClientCount < g_Config.m_SvMaxClients)
+		str_format(aName, sizeof(aName), "%s[%d/%d]", g_Config.m_SvName, ClientCount, g_Config.m_SvMaxClients);
+	p.AddString(aName, 64);
 	p.AddString(GetMapName(), 32);
 
 	// gametype
@@ -1142,12 +1140,12 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token)
 	str_format(aBuf, sizeof(aBuf), "%d", i);
 	p.AddString(aBuf, 2);
 
-	str_format(aBuf, sizeof(aBuf), "%d", PlayerCount); p.AddString(aBuf, 3); // num players
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvSpectatorSlots); p.AddString(aBuf, 3); // max players
-	str_format(aBuf, sizeof(aBuf), "%d", ClientCount); p.AddString(aBuf, 3); // num clients
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()); p.AddString(aBuf, 3); // max clients
+	str_format(aBuf, sizeof(aBuf), "%d", (PlayerCount > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : PlayerCount); p.AddString(aBuf, 3); // num players
+	str_format(aBuf, sizeof(aBuf), "%d", ((m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots) > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots); p.AddString(aBuf, 3); // max players
+	str_format(aBuf, sizeof(aBuf), "%d", (ClientCount > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : ClientCount); p.AddString(aBuf, 3); // num clients
+	str_format(aBuf, sizeof(aBuf), "%d", (m_NetServer.MaxClients() > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : m_NetServer.MaxClients()); p.AddString(aBuf, 3); // max clients
 
-	for(i = 0; i < MAX_CLIENTS; i++)
+	for(i = 0; i < VANILLA_MAX_PLAYER; i++)
 	{
 		if(m_aClients[i].m_State != CClient::STATE_EMPTY)
 		{

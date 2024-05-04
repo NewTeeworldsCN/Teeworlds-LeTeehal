@@ -34,9 +34,6 @@ inline T mix(const T a, const T b, TB amount)
 	return a + (b-a)*amount;
 }
 
-float random_float();
-bool random_prob(float f);
-int random_int(int Min, int Max);
 inline float frandom() { return rand()/(float)(RAND_MAX); }
 
 // float to fixed
