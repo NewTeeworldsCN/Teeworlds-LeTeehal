@@ -26,7 +26,7 @@ CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, Scrap S
     m_Level = Level;
     m_Hide = false;
     m_Random = Random;
-    m_ScrapType = Level - (SCRAP_L1 - 1) + (rand()%6);
+    m_ScrapType = rand()%NUM_SCRAPS;
     if(Random)
         GameServer()->ScrapInfo()->RandomScrap(m_ScrapType, m_ScrapValue, m_Weight);
     else
@@ -119,11 +119,12 @@ void CScrap::Snap(int SnappingClient)
         }
     }
 
+    int Radius = clamp(m_Weight, 5, 50);
     vec2 Vertices[4] = {
-        vec2(m_Pos.x - (m_Weight * 2 + 4), m_Pos.y - (m_Weight * 2 + 4)),
-        vec2(m_Pos.x + (m_Weight * 2 + 4), m_Pos.y - (m_Weight * 2 + 4)),
-        vec2(m_Pos.x + (m_Weight * 2 + 4), m_Pos.y + (m_Weight * 2 + 4)),
-        vec2(m_Pos.x - (m_Weight * 2 + 4), m_Pos.y + (m_Weight * 2 + 4))};
+        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
+        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
+        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4)),
+        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4))};
 
     m_Angle += ((float)m_ScrapValue) / 48.f;
 

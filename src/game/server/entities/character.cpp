@@ -734,8 +734,15 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-	m_pPlayer->m_Class = PLAYERCLASS_BRACKEN;
-	//m_pPlayer->RandomChooseClass();
+	if(m_pPlayer->m_Class == PLAYERCLASS_HUMAN)
+		m_pPlayer->RandomChooseClass();
+	else if(m_pPlayer->m_Class == PLAYERCLASS_NUTCRACKER)
+	{
+		Scrap s;
+		s.m_ScrapID = SCRAP_L3_SHOTGUN;
+		GameServer()->ScrapInfo()->RandomScrap(s.m_ScrapID, s.m_Value, s.m_Weight);
+		new CScrap(GameWorld(), 0, m_Pos, false, s);
+	}
 	m_pPlayer->DropAllScrap(m_Pos);
 }
 

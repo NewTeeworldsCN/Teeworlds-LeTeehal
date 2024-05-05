@@ -259,6 +259,7 @@ void CGameController::StartRound()
 		
 		GameServer()->m_apPlayers[i]->m_Score = 0;
 		GameServer()->m_apPlayers[i]->ResetScraps();
+		GameServer()->m_apPlayers[i]->m_Hand = 0;
 		GameServer()->m_apPlayers[i]->m_Class = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
 	}

@@ -404,4 +404,5 @@ void CPlayer::DropAllScrap(vec2 Pos)
 		new CScrap(&GameServer()->m_World, 0, Pos, false, *m_vScraps[i]);
 	}
 	m_vScraps.clear();
+	GameServer()->ResetVotes(GetCID());
 }
