@@ -406,11 +406,9 @@ int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 
 void CGameController::OnCharacterSpawn(class CCharacter *pChr)
 {
-	// give default weapons
-	pChr->GiveWeapon(WEAPON_HAMMER, -1);
-
 	Classes c;
 	pChr->IncreaseHealth(c.GetMaxHealth(pChr->GetPlayer()->m_Class));
+	c.GiveWeapons(pChr);
 }
 
 void CGameController::DoWarmup(int Seconds)

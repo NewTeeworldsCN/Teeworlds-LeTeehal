@@ -2,13 +2,13 @@
 
 enum
 {
-    PLAYERCLASS_HUMAN = 0,
-    PLAYERCLASS_HOARDINGBUG,
-    PLAYERCLASS_BUNKERSPIDER,
-    PLAYERCLASS_NUTCRACKER,
-    PLAYERCLASS_THUMPER,
-    PLAYERCLASS_SNAREFLEA,
-    PLAYERCLASS_BRACKEN,
+    PLAYERCLASS_HUMAN = 0,    // 调查员
+    PLAYERCLASS_HOARDINGBUG,  // 囤积虫
+    PLAYERCLASS_BUNKERSPIDER, // 蜘蛛
+    PLAYERCLASS_NUTCRACKER,   // 胡桃夹子
+    PLAYERCLASS_THUMPER,      // 半身鱼
+    PLAYERCLASS_SNAREFLEA,    // 抱脸虫
+    PLAYERCLASS_BRACKEN,      // 小黑
 
     NUM_PLAYERCLASS,
 };
@@ -20,7 +20,7 @@ struct Classes
         switch (Class)
         {
         case PLAYERCLASS_HUMAN:
-            return 999;
+            return 9999;
         case PLAYERCLASS_HOARDINGBUG:
             return 1; // Only 1
 
@@ -54,7 +54,7 @@ struct Classes
             pChr->GiveWeapon(WEAPON_HAMMER, -1);
             pChr->GiveWeapon(WEAPON_NINJA, -1);
             break;
-        
+
         default:
             pChr->GiveWeapon(WEAPON_HAMMER, -1);
             break;
