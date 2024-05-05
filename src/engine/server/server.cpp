@@ -989,7 +989,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 						break;
 					default:
 						Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_USER);
-				}	
+				}
 				Console()->ExecuteLineFlag(pCmd, ClientID, CFGFLAG_SERVER);
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
 				m_RconClientID = IServer::RCON_CID_SERV;
@@ -1104,7 +1104,7 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token)
 
 	// count the players
 	int PlayerCount = 0, ClientCount = 0;
-	for(int i = 0; i < VANILLA_MAX_PLAYER; i++)
+	for(int i = 0; i < MAX_PLAYER; i++)
 	{
 		if(m_aClients[i].m_State != CClient::STATE_EMPTY)
 		{
@@ -1141,9 +1141,9 @@ void CServer::SendServerInfo(const NETADDR *pAddr, int Token)
 	p.AddString(aBuf, 2);
 
 	str_format(aBuf, sizeof(aBuf), "%d", (PlayerCount > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : PlayerCount); p.AddString(aBuf, 3); // num players
-	str_format(aBuf, sizeof(aBuf), "%d", ((m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots) > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots); p.AddString(aBuf, 3); // max players
+	str_format(aBuf, sizeof(aBuf), "%d", ((m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots) > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER : m_NetServer.MaxClients() - g_Config.m_SvSpectatorSlots); p.AddString(aBuf, 3); // max players
 	str_format(aBuf, sizeof(aBuf), "%d", (ClientCount > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : ClientCount); p.AddString(aBuf, 3); // num clients
-	str_format(aBuf, sizeof(aBuf), "%d", (m_NetServer.MaxClients() > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER - 1 : m_NetServer.MaxClients()); p.AddString(aBuf, 3); // max clients
+	str_format(aBuf, sizeof(aBuf), "%d", (m_NetServer.MaxClients() > VANILLA_MAX_PLAYER) ? VANILLA_MAX_PLAYER : m_NetServer.MaxClients()); p.AddString(aBuf, 3); // max clients
 
 	for(i = 0; i < VANILLA_MAX_PLAYER; i++)
 	{

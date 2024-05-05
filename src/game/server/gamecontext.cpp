@@ -954,6 +954,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					pPlayer->m_LastSetTeam = Server()->Tick();
 					if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
 						m_VoteUpdate = true;
+
+					if(pMsg->m_Team == TEAM_SPECTATORS)
+						pPlayer->m_Class = 1;
+
 					pPlayer->SetTeam(pMsg->m_Team);
 					(void)m_pController->CheckTeamBalance();
 					pPlayer->m_TeamChangeTick = Server()->Tick();
