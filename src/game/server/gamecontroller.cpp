@@ -451,14 +451,11 @@ bool CGameController::IsFriendlyFire(int ClientID1, int ClientID2)
 	if(ClientID1 == ClientID2)
 		return false;
 
-	if(IsTeamplay())
-	{
-		if(!GameServer()->m_apPlayers[ClientID1] || !GameServer()->m_apPlayers[ClientID2])
-			return false;
+	if(!GameServer()->m_apPlayers[ClientID1] || !GameServer()->m_apPlayers[ClientID2])
+		return false;
 
-		if(GameServer()->m_apPlayers[ClientID1]->GetTeam() == GameServer()->m_apPlayers[ClientID2]->GetTeam())
-			return true;
-	}
+	if(GameServer()->m_apPlayers[ClientID1]->m_Class && GameServer()->m_apPlayers[ClientID2]->m_Class)
+		return true;
 
 	return false;
 }
@@ -504,7 +501,8 @@ void CGameController::Tick()
 	if(m_GameOverTick != -1)
 	{
 		if(CountPlayer < g_Config.m_SvLessPlayerStart)
-			GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("需要至少{int:num}名玩家才能启动游戏"), "num", &g_Config.m_SvLessPlayerStart);
+			CountPlayer;
+			//GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("需要至少{int:num}名玩家才能启动游戏"), "num", &g_Config.m_SvLessPlayerStart);
 		else if(Server()->Tick() > m_GameOverTick+Server()->TickSpeed()*4)
 		{
 			CycleMap();
@@ -758,46 +756,41 @@ void CGameController::DoWincheck()
 {
 	if(m_GameOverTick == -1 && !m_Warmup && !GameServer()->m_World.m_ResetRequested)
 	{
-		if(IsTeamplay())
+		// gather some stats
+		int CountHuman = 0;
+		int Topscore = 0;
+		int TopscoreCount = 0;
+		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			// check score win condition
-			if (g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
+			if(GameServer()->m_apPlayers[i])
 			{
-				if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
-					EndRound();
-				else
-					m_SuddenDeath = 1;
-			}
-		}
-		else
-		{
-			// gather some stats
-			int Topscore = 0;
-			int TopscoreCount = 0;
-			for(int i = 0; i < MAX_CLIENTS; i++)
-			{
-				if(GameServer()->m_apPlayers[i])
+				if(GameServer()->m_apPlayers[i]->m_Score > Topscore)
 				{
-					if(GameServer()->m_apPlayers[i]->m_Score > Topscore)
-					{
-						Topscore = GameServer()->m_apPlayers[i]->m_Score;
-						TopscoreCount = 1;
-						str_copy(m_TopPlayerName, Server()->ClientName(i), sizeof(m_TopPlayerName));
-					}
-					else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
-						TopscoreCount++;
+					Topscore = GameServer()->m_apPlayers[i]->m_Score;
+					TopscoreCount = 1;
+					str_copy(m_TopPlayerName, Server()->ClientName(i), sizeof(m_TopPlayerName));
 				}
-			}
-
-			// check win
-			if (g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
-			{
-				if(TopscoreCount == 1)
-					EndRound();
-				else
-					m_SuddenDeath = 1;
+				else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
+					TopscoreCount++;
+				
+				if(GameServer()->m_apPlayers[i]->m_Class == 0)
+					CountHuman++;
 			}
 		}
+
+		// check win
+		if (g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
+		{
+			if(TopscoreCount == 1 && CountHuman)
+				EndRound();
+			
+			if(!CountHuman)
+			{
+				str_copy(m_TopPlayerName, "怪物们", sizeof(m_TopPlayerName));
+				EndRound();
+			}
+		}
+
 	}
 }
 

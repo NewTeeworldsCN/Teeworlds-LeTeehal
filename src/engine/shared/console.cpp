@@ -271,7 +271,7 @@ bool CConsole::LineIsValid(const char *pStr)
 void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientID)
 {
 	int OutputLevel = OUTPUT_LEVEL_STANDARD;
-	if(m_FlagMask&CFGFLAG_CHAT)
+	if(m_FlagMask&CFGFLAG_USER || m_FlagMask&CFGFLAG_CHAT)
 		OutputLevel = OUTPUT_LEVEL_CHAT;
 	
 	while(pStr && *pStr)
@@ -788,7 +788,7 @@ void CConsole::Register(const char *pName, const char *pParams,
 	pCommand->m_Flags = Flags;
 	pCommand->m_Temp = false;
 	
-	if(Flags & CFGFLAG_CHAT)
+	if(Flags & CFGFLAG_CHAT || Flags & CFGFLAG_USER)
 		pCommand->SetAccessLevel(IConsole::ACCESS_LEVEL_USER);
 
 	if(DoAdd)

@@ -9,6 +9,8 @@
 #include "laser.h"
 #include "projectile.h"
 
+#include <game/server/classes.h>
+
 //input count
 struct CInputCount
 {
@@ -313,7 +315,11 @@ void CCharacter::FireWeapon()
 				else
 					Dir = vec2(0.f, -1.f);
 
-				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, 1,
+				int D = 1;
+				if(GetPlayer()->m_vScraps[GetPlayer()->m_Hand]->m_ScrapID == SCRAP_L2_SIGN)
+					D += 2;
+
+				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, D,
 					m_pPlayer->GetCID(), m_ActiveWeapon);
 				Hits++;
 			}
@@ -700,14 +706,16 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-	m_pPlayer->RandomChooseClass();
+	//m_pPlayer->RandomChooseClass();
+	m_pPlayer->m_Class = PLAYERCLASS_HOARDINGBUG;
+	m_pPlayer->DropAllScrap(m_Pos);
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
 	m_Core.m_Vel += Force;
 
-	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From) && !g_Config.m_SvTeamdamage)
+	if(GameServer()->m_pController->IsFriendlyFire(m_pPlayer->GetCID(), From))
 		return false;
 
 	// m_pPlayer only inflicts half damage on self
@@ -860,11 +868,17 @@ void CCharacter::PickupScrap()
 {
 	if(!IsAlive() || m_ReloadTimer)
 		return;
-
 	for(auto *pDrop = (CScrap*) GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pDrop; pDrop = (CScrap*) pDrop->TypeNext()) {
         if (pDrop) {
             if (distance(pDrop->m_Pos, m_Pos) < (pDrop->GetWeight()*2)+8) {
                 m_ReloadTimer = Server()->TickSpeed();
+				Classes c;
+				int MaxPicks = c.GetMaxPicks(GetPlayer()->m_Class);
+				if(MaxPicks <= GetPlayer()->m_vScraps.size())
+				{
+					GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你最多只能捡起{int:picks}个物品\n在投票界面丢出物品"), "picks", &MaxPicks);
+					return;
+				}
                 if (pDrop->Pickup(GetPlayer()->GetCID())) {
 					GameServer()->CreateHammerHit(pDrop->m_Pos);
                     pDrop->m_Hide = true;
@@ -884,8 +898,6 @@ void CCharacter::UpdateTuningParam()
 	{
 		int Weight = m_pPlayer->m_Weight;
 		float Factor = 1.0f - ((float)Weight / 200);
-		float FactorSpeed = 1.0f - ((float)Weight / 200);
-		float FactorAccel = 1.0f - ((float)Weight / 200);
 		m_pPlayer->m_NextTuningParams.m_GroundControlSpeed = pTuningParams.m_GroundControlSpeed * Factor;
 		m_pPlayer->m_NextTuningParams.m_GroundJumpImpulse = pTuningParams.m_GroundJumpImpulse * Factor;
 		m_pPlayer->m_NextTuningParams.m_AirJumpImpulse = pTuningParams.m_AirJumpImpulse * Factor;

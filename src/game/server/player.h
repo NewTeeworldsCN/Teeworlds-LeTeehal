@@ -8,8 +8,6 @@
 #include "gamecontext.h"
 #include "scrap-info.h"
 
-#include <vector>
-
 // player object
 class CPlayer
 {
@@ -104,8 +102,9 @@ public:
 
 	int m_Authed;
 
-	std::vector<Scrap *> m_vScraps;
+	array<Scrap *> m_vScraps;
 	void ResetScraps();
+	void EraseScrap(int ID);
 
 	int m_Weight;
 
@@ -116,6 +115,9 @@ public:
 
 	int m_Class;
 	void RandomChooseClass();
+
+	int m_Hand;
+	void DropAllScrap(vec2 Pos);
 private:
 	CCharacter *m_pCharacter;
 	CGameContext *m_pGameServer;

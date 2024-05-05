@@ -26,6 +26,7 @@ CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, Scrap S
     m_Level = Level;
     m_Hide = false;
     m_Random = Random;
+    m_ScrapType = Level - (SCRAP_L1 - 1) + (rand()%6);
     if(Random)
         GameServer()->ScrapInfo()->RandomScrap(m_ScrapType, m_ScrapValue, m_Weight);
     else
@@ -60,6 +61,9 @@ void CScrap::Reset()
 
 void CScrap::Tick()
 {
+    if(!m_Random && m_Hide)
+        Reset();
+
     if(m_Hide || GameWorld()->m_Paused || GameServer()->m_pController->IsGameOver())
         return;
 
@@ -81,11 +85,12 @@ bool CScrap::Pickup(int ClientID)
     if(ClientID > MAX_CLIENTS || ClientID < 0 || !GameServer()->m_apPlayers[ClientID])
         return false;
     
-    GameServer()->m_apPlayers[ClientID]->m_vScraps.push_back(new Scrap());
-    int ID = GameServer()->m_apPlayers[ClientID]->m_vScraps.size()-1;
-    GameServer()->m_apPlayers[ClientID]->m_vScraps[ID]->m_ScrapID = m_ScrapType;
-    GameServer()->m_apPlayers[ClientID]->m_vScraps[ID]->m_Value = m_ScrapValue;
-    GameServer()->m_apPlayers[ClientID]->m_vScraps[ID]->m_Weight = m_Weight;
+    Scrap *Temp = new Scrap();
+    Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_vScraps.size();
+    Temp->m_ScrapID = m_ScrapType;
+    Temp->m_Value = m_ScrapValue;
+    Temp->m_Weight = m_Weight;
+    GameServer()->m_apPlayers[ClientID]->m_vScraps.add(Temp);
     GameServer()->ResetVotes(ClientID);
     return true;
 }

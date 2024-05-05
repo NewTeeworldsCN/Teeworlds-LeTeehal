@@ -62,7 +62,7 @@ class CGameContext : public IGameServer
 	CCollision m_Collision;
 	CNetObjHandler m_NetObjHandler;
 	CTuningParams m_Tuning;
-	CScrapInfo m_ScrapInfo;
+	class CScrapInfo *m_pScrapInfo;
 
 	static void ConsoleOutputCallback_Chat(const char *pStr, void *pUser);
 
@@ -88,6 +88,8 @@ class CGameContext : public IGameServer
 	static void ConVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
+	static void ConHelp(IConsole::IResult *pResult, void *pUserData);
+
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
 
@@ -101,7 +103,7 @@ public:
 	class IConsole *Console() { return m_pConsole; }
 	CCollision *Collision() { return &m_Collision; }
 	CTuningParams *Tuning() { return &m_Tuning; }
-	CScrapInfo *ScrapInfo() { return &m_ScrapInfo; }
+	class CScrapInfo *ScrapInfo() { return m_pScrapInfo; }
 
 	CGameContext();
 	~CGameContext();

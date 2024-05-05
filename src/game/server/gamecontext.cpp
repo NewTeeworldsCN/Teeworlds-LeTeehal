@@ -464,6 +464,12 @@ void CGameContext::OnTick()
 		}
 	}
 
+	if(Server()->Tick() % (Server()->TickSpeed()*90) == 0)
+	{
+		SendChatTarget(-1, _("这是2024年第一届TMJ大赛的参赛作品之一"));
+		SendChatTarget(-1, _("加入QQ群893554667为本模式投票吧！"));
+	}
+
 	// Check for new broadcast
 	for (int i = 0; i < MAX_PLAYER; i++)
 	{
@@ -624,11 +630,16 @@ void CGameContext::OnClientEnter(int ClientID)
 	//world.insert_entity(&players[client_id]);
 	m_apPlayers[ClientID]->Respawn();
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "'%s' entered and joined the %s", Server()->ClientName(ClientID), m_pController->GetTeamName(m_apPlayers[ClientID]->GetTeam()));
-	SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 
+	SendChatTarget(-1, _("{str:name} 入职了公司"), "name", Server()->ClientName(ClientID));
 	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' team=%d", ClientID, Server()->ClientName(ClientID), m_apPlayers[ClientID]->GetTeam());
 	Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+
+	SendChatTarget(ClientID, _("欢迎来到Tee命公司！"));
+	SendChatTarget(ClientID, _("这是2024年第一届TMJ大赛的参赛作品之一"));
+	SendChatTarget(ClientID, _("加入QQ群893554667为本模式投票吧！"));
+	
+	SendChatTarget(ClientID, _("输入/help获取游戏玩法"));
 
 	m_VoteUpdate = true;
 }
@@ -753,7 +764,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					default:
 						Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_USER);
 				}	
-				
+
 				Console()->ExecuteLineFlag(pMsg->m_pMessage + 1, ClientID, CFGFLAG_CHAT);
 				
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
@@ -879,32 +890,15 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					{
 						if(str_comp(pReason, "1") == 0)
 						{
-							switch (m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID)
-							{
-							case SCRAP_L1_TOOTHPASTE:
-								SendChatTarget(ClientID, _("")); // TODO
-								break;
-							
-							default:
-								break;
-							}
+							if(m_apPlayers[ClientID]->m_Class == 0)
+								ScrapInfo()->Call(i, m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID, ClientID);
+							else
+								SendChatTarget(ClientID, _("怪物不能使用物品！"));
 						}
 						else
 						{
-
 							new CScrap(&m_World, 0, m_apPlayers[ClientID]->GetCharacter()->m_Pos, false, *m_apPlayers[ClientID]->m_vScraps[i]);
-							auto iter = m_apPlayers[ClientID]->m_vScraps.begin();
-							while (iter != m_apPlayers[ClientID]->m_vScraps.end())
-							{
-								Scrap s = **iter;
-								if(s.m_ScrapID == i)
-								{
-									m_apPlayers[ClientID]->m_vScraps.erase(iter);
-									break;
-								}
-								iter++;
-							}
-							ResetVotes(ClientID);
+							m_apPlayers[ClientID]->EraseScrap(m_apPlayers[ClientID]->m_vScraps[i]->m_ID);
 						}
 						return;
 					}
@@ -1485,25 +1479,14 @@ void CGameContext::ConAbout(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext* pThis = (CGameContext*) pUserData;
 	
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "%s %s by %s", MOD_NAME, MOD_VERSION, MOD_AUTHORS);
-	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_CHAT, "chat", aBuf);
+	pThis->SendChatTarget(pResult->GetClientID(), _("{str:name} {str:version} by {str:authors}"), "name", MOD_NAME, "version", MOD_VERSION, "authors", MOD_AUTHORS);
 	
 	if(MOD_CREDITS[0])
-	{
-		str_format(aBuf, sizeof(aBuf), "Credits: %s", MOD_CREDITS);
-		pThis->Console()->Print(IConsole::OUTPUT_LEVEL_CHAT, "chat", aBuf);
-	}
+		pThis->SendChatTarget(pResult->GetClientID(), _("Credits: {str:c}"), "c", MOD_CREDITS);
 	if(MOD_THANKS[0])
-	{
-		str_format(aBuf, sizeof(aBuf), "Thanks to: %s", MOD_THANKS);
-		pThis->Console()->Print(IConsole::OUTPUT_LEVEL_CHAT, "chat", aBuf);
-	}
+		pThis->SendChatTarget(pResult->GetClientID(), _("Thanks to: {str:c}"), "c", MOD_THANKS);
 	if(MOD_SOURCES[0])
-	{
-		str_format(aBuf, sizeof(aBuf), "Sources: %s", MOD_SOURCES);
-		pThis->Console()->Print(IConsole::OUTPUT_LEVEL_CHAT, "chat", aBuf);
-	}
+		pThis->SendChatTarget(pResult->GetClientID(), _("Source: {str:c}"), "c", MOD_SOURCES);
 }
 
 void CGameContext::ConLanguage(IConsole::IResult *pResult, void *pUserData)
@@ -1606,8 +1589,9 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("clear_votes", "", CFGFLAG_SERVER, ConClearVotes, this, "Clears the voting options");
 	Console()->Register("vote", "r", CFGFLAG_SERVER, ConVote, this, "Force a vote to yes/no");
 	
-	Console()->Register("about", "", CFGFLAG_CHAT, ConAbout, this, "Show information about the mod");
-	Console()->Register("language", "?s", CFGFLAG_CHAT, ConLanguage, this, "Show information about the mod");
+	Console()->Register("about", "", CFGFLAG_CHAT|CFGFLAG_USER, ConAbout, this, "Show information about the mod");
+	Console()->Register("language", "?s", CFGFLAG_CHAT|CFGFLAG_USER, ConLanguage, this, "Show information about the mod");
+	Console()->Register("help", "", CFGFLAG_CHAT|CFGFLAG_USER, ConHelp, this, "Show information about the mod");
 	
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 }
@@ -1624,7 +1608,8 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 
 	m_Layers.Init(Kernel());
 	m_Collision.Init(&m_Layers);
-	m_ScrapInfo.Init();
+	m_pScrapInfo = new CScrapInfo(this);
+	m_pScrapInfo->Init();
 
 	// select gametype
 	m_pController = new CGameController(this);
@@ -1751,6 +1736,7 @@ void CGameContext::ResetVotes(int ClientID)
 		{
 			char aBuf[32];
 			str_format(aBuf, sizeof(aBuf), "scrap %d", i);
+			//AddVote(ClientID, aBuf, _(aBuf));
 			AddVote(ClientID, aBuf, _("⊹ 废品:{str:name}, 价值{int:value}元, 重{int:weight}镑 "), "name", ScrapInfo()->GetScrapName(pP->m_vScraps[i]->m_ScrapID), "value", &pP->m_vScraps[i]->m_Value, "weight", &pP->m_vScraps[i]->m_Weight);
 		}
 	}
@@ -1819,4 +1805,19 @@ void CGameContext::AddBroadcast(int ClientID, const char *pText, int Priority, i
 		str_copy(m_aBroadcastStates[ClientID].m_aNextMessage, pText, sizeof(m_aBroadcastStates[ClientID].m_aNextMessage));
 		m_aBroadcastStates[ClientID].m_Priority = Priority;
 	}
+}
+
+void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	int ClientID = pResult->GetClientID();
+	pSelf->SendChatTarget(ClientID, _("- - - - - - -"));
+	pSelf->SendChatTarget(ClientID, _("游戏分为两个阵营：调查员和怪物"));
+	pSelf->SendChatTarget(ClientID, _("调查员们要抢夺地图内的废品，怪物们要阻止调查员收集废品"));
+	pSelf->SendChatTarget(ClientID, _("只有抢到废品价值最高的调查员才能获得胜利"));
+	pSelf->SendChatTarget(ClientID, _("如果所有调查员都死了，那么怪物胜利;如果倒计时结束，且场上还有调查员存活，那么分数最高的调查员胜利"));
+	pSelf->SendChatTarget(ClientID, _("关系：调查员与怪物-天敌 调查员与调查员-竞争 怪物与怪物-合作"));
+	pSelf->SendChatTarget(ClientID, _("使用锤子捡起废品，投票里使用或遗弃废品"));
+	pSelf->SendChatTarget(ClientID, _("废品越重，你的速度就越慢，跳的就越低"));
+	pSelf->SendChatTarget(ClientID, _("- - - - - - -"));
 }

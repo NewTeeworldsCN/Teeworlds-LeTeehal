@@ -142,7 +142,7 @@ void CPlayer::Snap(int SnappingClient)
 	{
 	case PLAYERCLASS_HUMAN:
 		StrToInts(&pClientInfo->m_Skin0, 6, "twintri");
-		StrToInts(&pClientInfo->m_Clan0, 3, "研究员");
+		StrToInts(&pClientInfo->m_Clan0, 3, "调查员");
 		pClientInfo->m_ColorBody = 3276544;
 		pClientInfo->m_ColorFeet = 3276544;
 		break;
@@ -380,4 +380,27 @@ void CPlayer::RandomChooseClass()
 {
 	int Class = (rand()%(NUM_PLAYERCLASS-1))+1;
 	m_Class = Class;
+}
+
+void CPlayer::EraseScrap(int ID)
+{
+	for (int i = 0; i < m_vScraps.size(); i++)
+	{
+		Scrap *s = m_vScraps[i];
+		if(!s)
+			continue;
+
+		if(s->m_ID == ID)
+			m_vScraps.remove(m_vScraps[i]);
+	}
+	GameServer()->ResetVotes(GetCID());
+}
+
+void CPlayer::DropAllScrap(vec2 Pos)
+{
+	for (int i = 0; i < m_vScraps.size(); i++)
+	{
+		new CScrap(&GameServer()->m_World, 0, Pos, false, *m_vScraps[i]);
+	}
+	m_vScraps.clear();
 }
