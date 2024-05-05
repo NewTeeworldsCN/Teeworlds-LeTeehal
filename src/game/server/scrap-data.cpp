@@ -93,9 +93,7 @@ void CScrapInfo::ConMetalsheet(int ClientID, int ScrapID, void *pUser)
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
     
-    int Armor = 5;
-    if(pP->m_vScraps[ScrapID])
-        int Armor = pP->m_vScraps[ScrapID]->m_Weight / 2;
+    int Armor = rand()%7+1;
     pP->GetCharacter()->IncreaseArmor(Armor);
     pThis->SendChatTarget(ClientID, _("你装备了金属板.. 防御+{int:health}"), "health", &Armor);
 
