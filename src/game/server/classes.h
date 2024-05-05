@@ -28,4 +28,36 @@ struct Classes
             return 0;
         }
     }
+
+    int GetMaxHealth(int Class)
+    {
+        switch (Class)
+        {
+        case PLAYERCLASS_HUMAN:
+            return 10;
+
+        default:
+            return 3;
+        }
+    }
+
+    void GiveWeapons(class CCharacter *pChr)
+    {
+        switch (pChr->GetPlayer()->m_Class)
+        {
+        case PLAYERCLASS_NUTCRACKER:
+            pChr->GiveWeapon(WEAPON_HAMMER, -1);
+            pChr->GiveWeapon(WEAPON_SHOTGUN, -1);
+            break;
+
+        case PLAYERCLASS_BRACKEN:
+            pChr->GiveWeapon(WEAPON_HAMMER, -1);
+            pChr->GiveWeapon(WEAPON_NINJA, -1);
+            break;
+        
+        default:
+            pChr->GiveWeapon(WEAPON_HAMMER, -1);
+            break;
+        }
+    }
 };

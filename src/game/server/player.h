@@ -102,6 +102,7 @@ public:
 
 	int m_Authed;
 
+	int m_ItemCount;
 	array<Scrap *> m_vScraps;
 	void ResetScraps();
 	void EraseScrap(int ID);

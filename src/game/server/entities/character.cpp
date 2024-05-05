@@ -59,7 +59,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_EmoteStop = -1;
 	m_LastAction = -1;
 	m_LastNoAmmoSound = -1;
-	m_ActiveWeapon = WEAPON_GUN;
+	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
 
@@ -79,12 +79,14 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_Alive = true;
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
+	m_HookMode = 0;
 
 	return true;
 }
 
 void CCharacter::Destroy()
 {
+	m_HookMode = 0;
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	m_Alive = false;
 }
@@ -115,80 +117,6 @@ bool CCharacter::IsGrounded()
 
 void CCharacter::HandleNinja()
 {
-	if(m_ActiveWeapon != WEAPON_NINJA)
-		return;
-
-	if ((Server()->Tick() - m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000))
-	{
-		// time's up, return
-		m_aWeapons[WEAPON_NINJA].m_Got = false;
-		m_ActiveWeapon = m_LastWeapon;
-
-		SetWeapon(m_ActiveWeapon);
-		return;
-	}
-
-	// force ninja Weapon
-	SetWeapon(WEAPON_NINJA);
-
-	m_Ninja.m_CurrentMoveTime--;
-
-	if (m_Ninja.m_CurrentMoveTime == 0)
-	{
-		// reset velocity
-		m_Core.m_Vel = m_Ninja.m_ActivationDir*m_Ninja.m_OldVelAmount;
-	}
-
-	if (m_Ninja.m_CurrentMoveTime > 0)
-	{
-		// Set velocity
-		m_Core.m_Vel = m_Ninja.m_ActivationDir * g_pData->m_Weapons.m_Ninja.m_Velocity;
-		vec2 OldPos = m_Pos;
-		GameServer()->Collision()->MoveBox(&m_Core.m_Pos, &m_Core.m_Vel, vec2(m_ProximityRadius, m_ProximityRadius), 0.f);
-
-		// reset velocity so the client doesn't predict stuff
-		m_Core.m_Vel = vec2(0.f, 0.f);
-
-		// check if we Hit anything along the way
-		{
-			CCharacter *aEnts[MAX_CLIENTS];
-			vec2 Dir = m_Pos - OldPos;
-			float Radius = m_ProximityRadius * 2.0f;
-			vec2 Center = OldPos + Dir * 0.5f;
-			int Num = GameServer()->m_World.FindEntities(Center, Radius, (CEntity**)aEnts, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
-
-			for (int i = 0; i < Num; ++i)
-			{
-				if (aEnts[i] == this)
-					continue;
-
-				// make sure we haven't Hit this object before
-				bool bAlreadyHit = false;
-				for (int j = 0; j < m_NumObjectsHit; j++)
-				{
-					if (m_apHitObjects[j] == aEnts[i])
-						bAlreadyHit = true;
-				}
-				if (bAlreadyHit)
-					continue;
-
-				// check so we are sufficiently close
-				if (distance(aEnts[i]->m_Pos, m_Pos) > (m_ProximityRadius * 2.0f))
-					continue;
-
-				// Hit a player, give him damage and stuffs...
-				GameServer()->CreateSound(aEnts[i]->m_Pos, SOUND_NINJA_HIT);
-				// set his velocity to fast upward (for now)
-				if(m_NumObjectsHit < 10)
-					m_apHitObjects[m_NumObjectsHit++] = aEnts[i];
-
-				aEnts[i]->TakeDamage(vec2(0, -10.0f), g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, m_pPlayer->GetCID(), WEAPON_NINJA);
-			}
-		}
-
-		return;
-	}
-
 	return;
 }
 
@@ -205,43 +133,75 @@ void CCharacter::DoWeaponSwitch()
 
 void CCharacter::HandleWeaponSwitch()
 {
-	int WantedWeapon = m_ActiveWeapon;
-	if(m_QueuedWeapon != -1)
-		WantedWeapon = m_QueuedWeapon;
-
 	// select Weapon
 	int Next = CountInput(m_LatestPrevInput.m_NextWeapon, m_LatestInput.m_NextWeapon).m_Presses;
 	int Prev = CountInput(m_LatestPrevInput.m_PrevWeapon, m_LatestInput.m_PrevWeapon).m_Presses;
 
-	if(Next < 128) // make sure we only try sane stuff
+	if (GetPlayer()->m_Class == PLAYERCLASS_BUNKERSPIDER)
 	{
-		while(Next) // Next Weapon selection
+		int WantedHookMode = m_HookMode;
+
+		if (Next < 128) // make sure we only try sane stuff
 		{
-			WantedWeapon = (WantedWeapon+1)%NUM_WEAPONS;
-			if(m_aWeapons[WantedWeapon].m_Got)
+			while (Next) // Next Weapon selection
+			{
+				WantedHookMode = (WantedHookMode + 1) % 2;
 				Next--;
+			}
 		}
-	}
 
-	if(Prev < 128) // make sure we only try sane stuff
-	{
-		while(Prev) // Prev Weapon selection
+		if (Prev < 128) // make sure we only try sane stuff
 		{
-			WantedWeapon = (WantedWeapon-1)<0?NUM_WEAPONS-1:WantedWeapon-1;
-			if(m_aWeapons[WantedWeapon].m_Got)
+			while (Prev) // Prev Weapon selection
+			{
+				WantedHookMode = (WantedHookMode + 2 - 1) % 2;
 				Prev--;
+			}
 		}
+
+		// Direct Weapon selection
+		if (m_LatestInput.m_WantedWeapon)
+			WantedHookMode = m_Input.m_WantedWeapon - 1;
+
+		if (WantedHookMode >= 0 && WantedHookMode < 2)
+			m_HookMode = WantedHookMode;
 	}
+	else
+	{
+		int WantedWeapon = m_ActiveWeapon;
+		if (m_QueuedWeapon != -1)
+			WantedWeapon = m_QueuedWeapon;
 
-	// Direct Weapon selection
-	if(m_LatestInput.m_WantedWeapon)
-		WantedWeapon = m_Input.m_WantedWeapon-1;
+		if (Next < 128) // make sure we only try sane stuff
+		{
+			while (Next) // Next Weapon selection
+			{
+				WantedWeapon = (WantedWeapon + 1) % NUM_WEAPONS;
+				if (m_aWeapons[WantedWeapon].m_Got)
+					Next--;
+			}
+		}
 
-	// check for insane values
-	if(WantedWeapon >= 0 && WantedWeapon < NUM_WEAPONS && WantedWeapon != m_ActiveWeapon && m_aWeapons[WantedWeapon].m_Got)
-		m_QueuedWeapon = WantedWeapon;
+		if (Prev < 128) // make sure we only try sane stuff
+		{
+			while (Prev) // Prev Weapon selection
+			{
+				WantedWeapon = (WantedWeapon - 1) < 0 ? NUM_WEAPONS - 1 : WantedWeapon - 1;
+				if (m_aWeapons[WantedWeapon].m_Got)
+					Prev--;
+			}
+		}
 
-	DoWeaponSwitch();
+		// Direct Weapon selection
+		if (m_LatestInput.m_WantedWeapon)
+			WantedWeapon = m_Input.m_WantedWeapon - 1;
+
+		// check for insane values
+		if (WantedWeapon >= 0 && WantedWeapon < NUM_WEAPONS && WantedWeapon != m_ActiveWeapon && m_aWeapons[WantedWeapon].m_Got)
+			m_QueuedWeapon = WantedWeapon;
+
+		DoWeaponSwitch();
+	}
 }
 
 void CCharacter::FireWeapon()
@@ -316,13 +276,16 @@ void CCharacter::FireWeapon()
 					Dir = vec2(0.f, -1.f);
 
 				int D = 1;
-				if(GetPlayer()->m_vScraps[GetPlayer()->m_Hand]->m_ScrapID == SCRAP_L2_SIGN)
+				if(GetPlayer()->m_Hand == SCRAP_L2_SIGN)
 					D += 2;
 
 				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, D,
 					m_pPlayer->GetCID(), m_ActiveWeapon);
 				Hits++;
 			}
+
+			if(GetPlayer()->m_Class == PLAYERCLASS_THUMPER)
+				m_Core.m_Vel += ((normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY))) * max(0.001f, 64.0f));
 
 			PickupScrap();
 
@@ -386,14 +349,43 @@ void CCharacter::FireWeapon()
 
 		case WEAPON_NINJA:
 		{
-			// reset Hit objects
+			// reset objects Hit
 			m_NumObjectsHit = 0;
-
-			m_Ninja.m_ActivationDir = Direction;
-			m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000;
-			m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
-
 			GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+
+			CCharacter *apEnts[MAX_CLIENTS];
+			int Hits = 0;
+			int Num = GameServer()->m_World.FindEntities(ProjStartPos, m_ProximityRadius*0.5f, (CEntity**)apEnts,
+														MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
+
+			for (int i = 0; i < Num; ++i)
+			{
+				CCharacter *pTarget = apEnts[i];
+
+				if ((pTarget == this) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, NULL, NULL))
+					continue;
+
+				// set his velocity to fast upward (for now)
+				if(length(pTarget->m_Pos-ProjStartPos) > 0.0f)
+					GameServer()->CreateHammerHit(pTarget->m_Pos-normalize(pTarget->m_Pos-ProjStartPos)*m_ProximityRadius*0.5f);
+				else
+					GameServer()->CreateHammerHit(ProjStartPos);
+
+				vec2 Dir;
+				if (length(pTarget->m_Pos - m_Pos) > 0.0f)
+					Dir = normalize(pTarget->m_Pos - m_Pos);
+				else
+					Dir = vec2(0.f, -1.f);
+
+				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, 20,
+					m_pPlayer->GetCID(), m_ActiveWeapon);
+				Hits++;
+			}
+
+			// if we Hit anything, we have to wait for the reload
+			if(Hits)
+				m_ReloadTimer = Server()->TickSpeed()/3;
+
 		} break;
 
 	}
@@ -537,7 +529,43 @@ void CCharacter::Tick()
 
 	m_Core.m_Input = m_Input;
 
+	if (GetPlayer()->m_Class == PLAYERCLASS_BUNKERSPIDER)
+	{
+		if (m_HookMode == 1 &&
+			m_Core.m_HookState == HOOK_GRABBED &&
+			distance(m_Core.m_Pos, m_Core.m_HookPos) > 48.0f &&
+			m_Core.m_HookedPlayer < 0)
+		{
+			// Find other players
+			for (CCharacter *p = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); p; p = (CCharacter *)p->TypeNext())
+			{
+				if (p->GetPlayer()->m_Class > PLAYERCLASS_HUMAN)
+					continue;
+
+				vec2 IntersectPos = closest_point_on_line(m_Core.m_Pos, m_Core.m_HookPos, p->m_Pos);
+				float Len = distance(p->m_Pos, IntersectPos);
+				if (Len < p->m_ProximityRadius)
+				{
+					m_Core.m_HookState = HOOK_GRABBED;
+					m_Core.m_HookPos = p->m_Pos;
+					m_Core.m_HookedPlayer = p->m_pPlayer->GetCID();
+					m_Core.m_HookTick = 0;
+					m_HookMode = 0;
+
+					break;
+				}
+			}
+		}
+
+		if (m_HookMode > 0)
+		{
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_WEAPONSTATE, BROADCAST_DURATION_REALTIME, _("蛛网模式开"), NULL);
+		}
+	}
+
+
 	CCharacterCore::CParams CoreTickParams(&m_pPlayer->m_NextTuningParams);
+	CoreTickParams.m_HookMode = m_HookMode;
 
 	vec2 PrevPos = m_Core.m_Pos;
 	m_Core.Tick(true, &CoreTickParams);
@@ -706,8 +734,7 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-	//m_pPlayer->RandomChooseClass();
-	m_pPlayer->m_Class = PLAYERCLASS_HOARDINGBUG;
+	m_pPlayer->RandomChooseClass();
 	m_pPlayer->DropAllScrap(m_Pos);
 }
 
@@ -903,5 +930,10 @@ void CCharacter::UpdateTuningParam()
 		m_pPlayer->m_NextTuningParams.m_AirJumpImpulse = pTuningParams.m_AirJumpImpulse * Factor;
 		m_pPlayer->m_NextTuningParams.m_AirControlSpeed = pTuningParams.m_AirControlSpeed * Factor;
 		m_pPlayer->m_NextTuningParams.m_Gravity = (0.5f + (Weight/400));
+	}
+	if(m_HookMode == 1)
+	{
+		m_pPlayer->m_NextTuningParams.m_HookDragSpeed = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_HookDragAccel = 1.0f;
 	}
 }

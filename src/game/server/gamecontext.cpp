@@ -891,7 +891,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						if(str_comp(pReason, "1") == 0)
 						{
 							if(m_apPlayers[ClientID]->m_Class == 0)
-								ScrapInfo()->Call(i, m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID, ClientID);
+								ScrapInfo()->Call(m_apPlayers[ClientID]->m_vScraps[i]->m_ID, m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID, ClientID);
 							else
 								SendChatTarget(ClientID, _("怪物不能使用物品！"));
 						}

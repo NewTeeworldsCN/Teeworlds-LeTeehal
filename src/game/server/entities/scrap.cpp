@@ -86,7 +86,8 @@ bool CScrap::Pickup(int ClientID)
         return false;
     
     Scrap *Temp = new Scrap();
-    Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_vScraps.size();
+    Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_ItemCount;
+    GameServer()->m_apPlayers[ClientID]->m_ItemCount++;
     Temp->m_ScrapID = m_ScrapType;
     Temp->m_Value = m_ScrapValue;
     Temp->m_Weight = m_Weight;

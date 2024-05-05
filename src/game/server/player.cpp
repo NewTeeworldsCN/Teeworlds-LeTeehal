@@ -29,6 +29,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_NextTuningParams = m_PrevTuningParams;
 
 	m_Class = PLAYERCLASS_HUMAN;
+	m_ItemCount = 0;
 }
 
 CPlayer::~CPlayer()

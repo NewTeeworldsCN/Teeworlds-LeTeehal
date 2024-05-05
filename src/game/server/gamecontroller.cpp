@@ -9,6 +9,7 @@
 #include "gamecontext.h"
 
 #include "entities/pickup.h"
+#include "classes.h"
 //#include "scrap-info.h"
 
 CGameController::CGameController(class CGameContext *pGameServer)
@@ -211,6 +212,7 @@ void CGameController::EndRound()
 		return;
 
 	GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("游戏结束！胜利者是{str:name}!"), "name", m_TopPlayerName);
+	GameServer()->SendChatTarget(-1, _("游戏结束！胜利者是{str:name}!"), "name", m_TopPlayerName);
 	m_GameOverTick = Server()->Tick();
 	m_SuddenDeath = 0;
 }
@@ -258,6 +260,7 @@ void CGameController::StartRound()
 		GameServer()->m_apPlayers[i]->m_Score = 0;
 		GameServer()->m_apPlayers[i]->ResetScraps();
 		GameServer()->m_apPlayers[i]->m_Class = 0;
+		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
 	}
 	m_ForceBalanced = false;
 	Server()->DemoRecorder_HandleAutoStart();
@@ -403,15 +406,11 @@ int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 
 void CGameController::OnCharacterSpawn(class CCharacter *pChr)
 {
-	// default health
-	if(pChr->GetPlayer()->m_Class == 0)
-		pChr->IncreaseHealth(10);
-	else
-		pChr->IncreaseHealth(3);
-
 	// give default weapons
 	pChr->GiveWeapon(WEAPON_HAMMER, -1);
-	pChr->GiveWeapon(WEAPON_GUN, 10);
+
+	Classes c;
+	pChr->IncreaseHealth(c.GetMaxHealth(pChr->GetPlayer()->m_Class));
 }
 
 void CGameController::DoWarmup(int Seconds)
@@ -501,8 +500,7 @@ void CGameController::Tick()
 	if(m_GameOverTick != -1)
 	{
 		if(CountPlayer < g_Config.m_SvLessPlayerStart)
-			CountPlayer;
-			//GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("需要至少{int:num}名玩家才能启动游戏"), "num", &g_Config.m_SvLessPlayerStart);
+			GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("需要至少{int:num}名玩家才能启动游戏"), "num", &g_Config.m_SvLessPlayerStart);
 		else if(Server()->Tick() > m_GameOverTick+Server()->TickSpeed()*4)
 		{
 			CycleMap();
@@ -777,18 +775,19 @@ void CGameController::DoWincheck()
 					CountHuman++;
 			}
 		}
+		
+		if(!CountHuman)
+		{
+			str_copy(m_TopPlayerName, "怪物们", sizeof(m_TopPlayerName));
+			EndRound();
+			return;
+		}
 
 		// check win
 		if (g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
 		{
 			if(TopscoreCount == 1 && CountHuman)
 				EndRound();
-			
-			if(!CountHuman)
-			{
-				str_copy(m_TopPlayerName, "怪物们", sizeof(m_TopPlayerName));
-				EndRound();
-			}
 		}
 
 	}

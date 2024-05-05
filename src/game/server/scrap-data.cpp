@@ -18,7 +18,7 @@ void CScrapInfo::ConToothpaste(int ClientID, int ScrapID, void *pUser)
     }
     else
     {
-        pThis->SendChatTarget(ClientID, _("你喝下了牙膏，hmm, 草莓味的"), "health", &Health);
+        pThis->SendChatTarget(ClientID, _("你喝下了牙膏，hmm, 草莓味的"));
     }
 
     pP->EraseScrap(ScrapID);
@@ -142,7 +142,9 @@ void CScrapInfo::ConSign(int ClientID, int ScrapID, void *pUser)
 
     pThis->SendChatTarget(ClientID, _("你把路标拿在手上当武器."));
 
-    pP->m_Hand = ScrapID;
+    pP->m_Hand = SCRAP_L2_SIGN;
+
+    pP->EraseScrap(ScrapID);
 }
 
 void CScrapInfo::ConPill(int ClientID, int ScrapID, void *pUser)
