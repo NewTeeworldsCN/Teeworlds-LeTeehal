@@ -28,7 +28,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_PrevTuningParams = *pGameServer->Tuning();
 	m_NextTuningParams = m_PrevTuningParams;
 
-	m_Class = PLAYERCLASS_HUMAN;
+	RandomChooseClass();
 	m_ItemCount = 0;
 }
 
