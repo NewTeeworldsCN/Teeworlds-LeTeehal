@@ -84,6 +84,9 @@ bool CScrap::Pickup(int ClientID)
 {
     if(ClientID > MAX_CLIENTS || ClientID < 0 || !GameServer()->m_apPlayers[ClientID])
         return false;
+
+    if(m_Hide)
+        return false;
     
     Scrap *Temp = new Scrap();
     Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_ItemCount;

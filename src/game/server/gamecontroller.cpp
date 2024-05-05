@@ -407,6 +407,8 @@ int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 
 void CGameController::OnCharacterSpawn(class CCharacter *pChr)
 {
+	if(!IsGameOver())
+		pChr->GetPlayer()->RandomChooseClass();
 	Classes c;
 	pChr->IncreaseHealth(c.GetMaxHealth(pChr->GetPlayer()->m_Class));
 	c.GiveWeapons(pChr);
