@@ -11,7 +11,7 @@ class CScrap : public CEntity
     CWorldCore *m_pWorld;
 
 public:
-    CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, class Scrap S);
+    CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, bool InShip, class Scrap S);
     ~CScrap();
 
     virtual void Reset();
@@ -24,7 +24,7 @@ public:
     int GetScrapValue() { return m_ScrapValue; }
     int GetScrapType() { return m_ScrapType; }
     int GetWeight() { return m_Weight; }
-
+    bool GetInShip() { return m_InShip; }
     bool m_Hide;
 
 private:
@@ -33,6 +33,7 @@ private:
     int m_ScrapType;
     int m_Weight;
     bool m_Random;
+    bool m_InShip;
     float m_Angle;
 
     int m_IDs[NUM_ID];

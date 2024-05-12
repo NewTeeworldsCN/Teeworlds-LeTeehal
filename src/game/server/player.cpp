@@ -28,8 +28,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_PrevTuningParams = *pGameServer->Tuning();
 	m_NextTuningParams = m_PrevTuningParams;
 
-	RandomChooseClass();
 	m_ItemCount = 0;
+	m_VoteStarted = false;
 }
 
 CPlayer::~CPlayer()
@@ -299,13 +299,6 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	if(m_Team == Team)
 		return;
 
-	char aBuf[512];
-	if(DoChatMsg)
-	{
-		str_format(aBuf, sizeof(aBuf), "'%s' joined the %s", Server()->ClientName(m_ClientID), GameServer()->m_pController->GetTeamName(Team));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-	}
-
 	KillCharacter();
 
 	m_Team = Team;
@@ -313,8 +306,6 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	m_SpectatorID = SPEC_FREEVIEW;
 	// we got to wait 0.5 secs before respawning
 	m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
-	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' m_Team=%d", m_ClientID, Server()->ClientName(m_ClientID), m_Team);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	GameServer()->m_pController->OnPlayerInfoChange(GameServer()->m_apPlayers[m_ClientID]);
 
@@ -397,11 +388,11 @@ void CPlayer::EraseScrap(int ID)
 	GameServer()->ResetVotes(GetCID());
 }
 
-void CPlayer::DropAllScrap(vec2 Pos)
+void CPlayer::DropAllScrap(vec2 Pos, bool InShip)
 {
 	for (int i = 0; i < m_vScraps.size(); i++)
 	{
-		new CScrap(&GameServer()->m_World, 0, Pos, false, *m_vScraps[i]);
+		new CScrap(&GameServer()->m_World, 0, Pos, false, InShip, *m_vScraps[i]);
 	}
 	m_vScraps.clear();
 	GameServer()->ResetVotes(GetCID());

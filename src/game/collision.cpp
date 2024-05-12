@@ -202,3 +202,90 @@ void CCollision::MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elas
 	*pInoutPos = Pos;
 	*pInoutVel = Vel;
 }
+
+bool CCollision::ModifTile(ivec2 pos, int group, int layer, int tile, int flags, int reserved)
+{
+	CMapItemGroup *pGroup = m_pLayers->GetGroup(group);
+	CMapItemLayer *pLayer = m_pLayers->GetLayer(pGroup->m_StartLayer + layer);
+	if (pLayer->m_Type != LAYERTYPE_TILES)
+		return false;
+
+	CMapItemLayerTilemap *pTilemap = reinterpret_cast<CMapItemLayerTilemap *>(pLayer);
+	int TotalTiles = pTilemap->m_Width * pTilemap->m_Height;
+	int tpos = (int)pos.y * pTilemap->m_Width + (int)pos.x;
+	if (tpos < 0 || tpos >= TotalTiles)
+		return false;
+
+	if (pTilemap != m_pLayers->GameLayer())
+	{
+		CTile *pTiles = static_cast<CTile *>(m_pLayers->Map()->GetData(pTilemap->m_Data));
+		pTiles[tpos].m_Flags = flags;
+		pTiles[tpos].m_Index = tile;
+		pTiles[tpos].m_Reserved = reserved;
+	}
+	else
+	{
+		m_pTiles[tpos].m_Index = tile;
+		m_pTiles[tpos].m_Flags = flags;
+		m_pTiles[tpos].m_Reserved = reserved;
+
+		switch (tile)
+		{
+		case TILE_DEATH:
+			m_pTiles[tpos].m_Index = COLFLAG_DEATH;
+			break;
+		case TILE_SOLID:
+			m_pTiles[tpos].m_Index = COLFLAG_SOLID;
+			break;
+		default:
+			if (tile <= 128)
+				m_pTiles[tpos].m_Index = 0;
+		}
+	}
+
+	return true;
+}
+
+bool CCollision::IntersectLine2(vec2 Pos0, vec2 Pos1) // Done to avoid lags (checks every tiles instead of every single pos, going 32 by 32 instead of 1 by 1)
+{
+    vec2 Dir = normalize(Pos1 - Pos0) * 32;
+
+    float Distance = distance(Pos0, Pos1);
+
+    while(Distance > 32)
+    {
+        Pos0 += Dir;
+        if(CheckPoint(Pos0))
+            return true;
+        Distance = distance(Pos0, Pos1);
+    }
+
+	return false;
+}
+
+bool CCollision::EmptyOnLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
+{
+	float Distance = distance(Pos0, Pos1);
+	int End(Distance+1);
+	vec2 Last = Pos0;
+
+	for(int i = 0; i < End; i++)
+	{
+		float a = i/Distance;
+		vec2 Pos = mix(Pos0, Pos1, a);
+		if(!CheckPoint(Pos.x, Pos.y))
+		{
+			if(pOutCollision)
+				*pOutCollision = Pos;
+			if(pOutBeforeCollision)
+				*pOutBeforeCollision = Last;
+			return true;
+		}
+		Last = Pos;
+	}
+	if(pOutCollision)
+		*pOutCollision = Pos1;
+	if(pOutBeforeCollision)
+		*pOutBeforeCollision = Pos1;
+	return false;
+}

@@ -257,7 +257,7 @@ function build(settings)
 	end
 	
 	engine = Compile(engine_settings, Collect("src/engine/shared/*.cpp", "src/base/*.c"))
-	server = Compile(server_settings, Collect("src/engine/server/*.cpp"))
+	server = Compile(server_settings, Collect("src/engine/server/*.cpp", "src/engine/gfx/*.cpp"))
 	teeuniverses = Compile(server_settings, Collect("src/teeuniverses/*.cpp", "src/teeuniverses/components/*.cpp", "src/teeuniverses/system/*.cpp"))
 
 	game_shared = Compile(settings, Collect("src/game/*.cpp"), nethash, network_source)

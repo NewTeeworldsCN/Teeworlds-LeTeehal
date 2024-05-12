@@ -79,6 +79,11 @@ public:
 
 	virtual const char* GetClientLanguage(int ClientID) = 0;
 	virtual void SetClientLanguage(int ClientID, const char* pLanguage) = 0;
+
+	int m_LocateGame;
+	bool m_MapGenerated; // MapGen
+
+	virtual const char *NextMapName() = 0;
 };
 
 class IGameServer : public IInterface

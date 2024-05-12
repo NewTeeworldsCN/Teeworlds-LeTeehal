@@ -4,6 +4,9 @@
 #define GAME_SERVER_GAMECONTROLLER_H
 
 #include <base/vmath.h>
+#include <vector>
+#include <base/tl/array.h>
+#include "entities/ship.h"
 
 /*
 	Class: Game Controller
@@ -49,7 +52,6 @@ protected:
 
 	int m_RoundStartTick;
 	int m_GameOverTick;
-	int m_SuddenDeath;
 
 	int m_aTeamscore[2];
 
@@ -64,7 +66,6 @@ protected:
 public:
 	const char *m_pGameType;
 
-	bool IsTeamplay() const;
 	bool IsGameOver() const { return m_GameOverTick != -1; }
 
 	CGameController(class CGameContext *pGameServer);
@@ -136,7 +137,6 @@ public:
 	/*
 
 	*/
-	virtual const char *GetTeamName(int Team);
 	virtual int GetAutoTeam(int NotThisID);
 	virtual bool CanJoinTeam(int Team, int NotThisID);
 	bool CheckTeamBalance();
@@ -145,7 +145,15 @@ public:
 
 	virtual void PostReset();
 
-	char m_TopPlayerName[16];
+	CShip *m_pShip;
+	int m_PrepareTick;
+	bool m_LaunchShip;
+
+	int m_ReloadTick;
+
+	array<vec2> m_aMonsterSpawnPos;
+	int m_MonsterSpawnNum;
+	int m_MonsterSpawnCurrentNum;
 };
 
 #endif

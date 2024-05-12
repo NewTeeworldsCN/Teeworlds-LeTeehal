@@ -8,6 +8,7 @@
 #include "character.h"
 #include "laser.h"
 #include "projectile.h"
+#include "ship.h"
 
 #include <game/server/classes.h>
 
@@ -62,6 +63,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
+	m_InShip = false;
 
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
@@ -80,6 +82,8 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameServer()->m_pController->OnCharacterSpawn(this);
 	m_HookMode = 0;
+
+	GameServer()->ResetVotes(GetPlayer()->GetCID());
 
 	return true;
 }
@@ -516,15 +520,6 @@ void CCharacter::ResetInput()
 
 void CCharacter::Tick()
 {
-	if(m_pPlayer->m_ForceBalanced)
-	{
-		char Buf[128];
-		str_format(Buf, sizeof(Buf), "You were moved to %s due to team balancing", GameServer()->m_pController->GetTeamName(m_pPlayer->GetTeam()));
-		GameServer()->SendBroadcast(m_pPlayer->GetCID(), BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, Buf);
-
-		m_pPlayer->m_ForceBalanced = false;
-	}
-
 	UpdateTuningParam();
 
 	m_Core.m_Input = m_Input;
@@ -734,16 +729,7 @@ void CCharacter::Die(int Killer, int Weapon)
 	GameServer()->m_World.RemoveEntity(this);
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-	if(m_pPlayer->m_Class == PLAYERCLASS_HUMAN)
-		m_pPlayer->RandomChooseClass();
-	else if(m_pPlayer->m_Class == PLAYERCLASS_NUTCRACKER)
-	{
-		Scrap s;
-		s.m_ScrapID = SCRAP_L3_SHOTGUN;
-		GameServer()->ScrapInfo()->RandomScrap(s.m_ScrapID, s.m_Value, s.m_Weight);
-		new CScrap(GameWorld(), 0, m_Pos, false, s);
-	}
-	m_pPlayer->DropAllScrap(m_Pos);
+	m_pPlayer->DropAllScrap(m_Pos, m_InShip);
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
@@ -903,24 +889,30 @@ void CCharacter::PickupScrap()
 {
 	if(!IsAlive() || m_ReloadTimer)
 		return;
-	for(auto *pDrop = (CScrap*) GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pDrop; pDrop = (CScrap*) pDrop->TypeNext()) {
-        if (pDrop) {
-            if (distance(pDrop->m_Pos, m_Pos) < (pDrop->GetWeight()*2)+8) {
-                m_ReloadTimer = Server()->TickSpeed();
-				Classes c;
-				int MaxPicks = c.GetMaxPicks(GetPlayer()->m_Class);
-				if(MaxPicks <= GetPlayer()->m_vScraps.size())
+	for(auto *pDrop = (CScrap*) GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pDrop; pDrop = (CScrap*) pDrop->TypeNext())
+	{
+        if (pDrop)
+		{
+            if (distance(pDrop->m_Pos, m_Pos) < (pDrop->GetWeight()*2)+8)
+			{
+                if(!pDrop->m_Hide)
 				{
-					GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你最多只能捡起{int:picks}个物品\n在投票界面丢出物品"), "picks", &MaxPicks);
-					return;
+					Classes c;
+					int MaxPicks = c.GetMaxPicks(GetPlayer()->m_Class);
+					if(MaxPicks <= GetPlayer()->m_vScraps.size())
+					{
+						GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你最多只能捡起{int:picks}个物品\n在投票界面丢出物品"), "picks", &MaxPicks);
+						return;
+					}
+                	if (pDrop->Pickup(GetPlayer()->GetCID()))
+					{
+						GameServer()->CreateHammerHit(pDrop->m_Pos);
+						int Value = pDrop->GetScrapValue();
+						GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{str:iname},价值{int:value}元"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value);
+						pDrop->Reset();
+                	    return;
+                	}
 				}
-                if (pDrop->Pickup(GetPlayer()->GetCID())) {
-					GameServer()->CreateHammerHit(pDrop->m_Pos);
-                    pDrop->m_Hide = true;
-					int Value = pDrop->GetScrapValue();
-					GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{str:iname},价值{int:value}元"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value);
-                    return;
-                }
             }
         }
     }

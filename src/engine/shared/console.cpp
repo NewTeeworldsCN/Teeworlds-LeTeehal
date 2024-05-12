@@ -714,7 +714,7 @@ CConsole::CConsole(int FlagMask)
 		Register(#ScriptName, "?r", Flags, StrVariableCommand, &Data, Desc); \
 	}
 
-	#include "config_variables.h"
+	#include <game/var_config.h>
 
 	#undef MACRO_CONFIG_INT
 	#undef MACRO_CONFIG_STR

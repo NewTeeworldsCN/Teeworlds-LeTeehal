@@ -1,10 +1,13 @@
-/* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
+
+
 #include <base/math.h>
 #include <base/system.h>
 #include <engine/storage.h>
 #include "datafile.h"
 #include <zlib.h>
+// MapGen
+#include <game/mapitems.h>
+#include <game/gamecore.h>
 
 static const int DEBUG=0;
 
@@ -284,7 +287,7 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			unsigned long UncompressedSize = m_pDataFile->m_Info.m_pDataSizes[Index];
 			unsigned long s;
 
-			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%d", Index, DataSize, UncompressedSize);
+			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%d", Index, DataSize, (int)UncompressedSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *)mem_alloc(UncompressedSize, 1);
 
 			// read the compressed data
@@ -559,7 +562,7 @@ int CDataFileWriter::Finish()
 	for(int i = 0; i < m_NumItems; i++)
 	{
 		if(DEBUG)
-			dbg_msg("datafile", "item=%d size=%d (%d)", i, m_pItems[i].m_Size, m_pItems[i].m_Size+sizeof(CDatafileItem));
+			dbg_msg("datafile", "item=%d size=%d (%d)", i, m_pItems[i].m_Size, int(m_pItems[i].m_Size+sizeof(CDatafileItem)));
 		ItemSize += m_pItems[i].m_Size + sizeof(CDatafileItem);
 	}
 
@@ -596,7 +599,7 @@ int CDataFileWriter::Finish()
 
 		// write Header
 		if(DEBUG)
-			dbg_msg("datafile", "HeaderSize=%d", sizeof(Header));
+			dbg_msg("datafile", "HeaderSize=%d", (int)sizeof(Header));
 #if defined(CONF_ARCH_ENDIAN_BIG)
 		swap_endian(&Header, sizeof(int), sizeof(Header)/sizeof(int));
 #endif
@@ -720,4 +723,167 @@ int CDataFileWriter::Finish()
 	if(DEBUG)
 		dbg_msg("datafile", "done");
 	return 0;
+}
+
+// MapGen
+bool CDataFileWriter::SaveMap(class IStorage *pStorage, CDataFileReader *pFileMap, const char *pFileName, char *pBlocksData, int BlocksDataSize)
+{
+	dbg_msg("CDataFileWriter", "saving to '%s'...", pFileName);
+	char aBuf[128];
+
+	if(!Open(pStorage, pFileName))
+	{
+		dbg_msg("CDataFileWriter", "failed to open file '%s'...", pFileName);
+		return 0;
+	}
+
+
+	// save version
+	{
+		CMapItemVersion *pItem = (CMapItemVersion *)pFileMap->FindItem(MAPITEMTYPE_VERSION, 0);
+		AddItem(MAPITEMTYPE_VERSION, 0, sizeof(CMapItemVersion), pItem);
+		dbg_msg("CDataFileWriter", "saving version");
+	}
+
+
+	// save map info
+	{
+        CMapItemInfo Item = *((CMapItemInfo *)pFileMap->FindItem(MAPITEMTYPE_INFO, 0));
+		if(Item.m_Version == 1)
+		{
+			if(Item.m_Author > -1)
+			{
+				str_copy(aBuf, (char *)pFileMap->GetData(Item.m_Author), sizeof(aBuf));
+				Item.m_Author = AddData(str_length(aBuf)+1, aBuf);
+			}
+			if(Item.m_MapVersion > -1)
+			{
+				str_copy(aBuf, (char *)pFileMap->GetData(Item.m_MapVersion), sizeof(aBuf));
+				Item.m_MapVersion = AddData(str_length(aBuf)+1, aBuf);
+			}
+			if(Item.m_Credits > -1)
+			{
+				str_copy(aBuf, (char *)pFileMap->GetData(Item.m_Credits), sizeof(aBuf));
+				Item.m_Credits = AddData(str_length(aBuf)+1, aBuf);
+			}
+			if(Item.m_License > -1)
+			{
+				str_copy(aBuf, (char *)pFileMap->GetData(Item.m_License), sizeof(aBuf));
+				Item.m_License = AddData(str_length(aBuf)+1, aBuf);
+			}
+		}
+
+		AddItem(MAPITEMTYPE_INFO, 0, sizeof(CMapItemInfo), &Item);
+		dbg_msg("CDataFileWriter", "saving info");
+	}
+
+
+	// save images
+	int Start, Count;
+	pFileMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Count);
+	for(int i = 0; i < Count; i++)
+	{
+	    dbg_msg("CDataFileWriter", "saving image");
+		CMapItemImage Item = *((CMapItemImage *)pFileMap->GetItem(Start+i, 0, 0));
+		str_copy(aBuf, (char *)pFileMap->GetData(Item.m_ImageName), sizeof(aBuf));
+		Item.m_ImageName = AddData(str_length(aBuf)+1, aBuf);
+		if(Item.m_External == 0)
+        {
+			const int PixelSize = Item.m_Format == CImageInfoFile::FORMAT_RGB ? 3 : 4;
+			void *pData = pFileMap->GetData(Item.m_ImageData);
+			Item.m_ImageData = AddData(Item.m_Width*Item.m_Height*PixelSize, pData);
+        }
+		AddItem(MAPITEMTYPE_IMAGE, i, sizeof(CMapItemImage), &Item);
+	}
+
+
+	// save layers
+    enum
+	{
+		COLFLAG_SOLID=1,
+		COLFLAG_DEATH=2,
+		COLFLAG_NOHOOK=4,
+	};
+
+	int LayerStart, LayerCount=0, LayerNum, GroupStart, GroupCount=0, GroupNum;
+	pFileMap->GetType(MAPITEMTYPE_GROUP, &GroupStart, &GroupNum);
+	pFileMap->GetType(MAPITEMTYPE_LAYER, &LayerStart, &LayerNum);
+
+	for(int g = 0; g < GroupNum; g++)
+	{
+		CMapItemGroup *pGroup = static_cast<CMapItemGroup *>(pFileMap->GetItem(GroupStart+g, 0, 0));
+
+		for(int l = 0; l < pGroup->m_NumLayers; l++)
+		{
+			CMapItemLayer *pLayer = static_cast<CMapItemLayer *>(pFileMap->GetItem(LayerStart+(pGroup->m_StartLayer+l), 0, 0));
+
+			if(pLayer->m_Type == LAYERTYPE_TILES)
+			{
+			    //dbg_msg("CDataFileWriter", "saving tile layer");
+
+				CMapItemLayerTilemap Tilemap = *(reinterpret_cast<CMapItemLayerTilemap *>(pLayer));
+				CTile *pTiles = (CTile *)pFileMap->GetData(Tilemap.m_Data);
+
+                if (Tilemap.m_Flags&TILESLAYERFLAG_GAME)
+                {
+                    for (int u=0; u<Tilemap.m_Width; u++)
+                    {
+                        for (int o=0; o<Tilemap.m_Height; o++)
+                        {
+                            const int tpos = o*Tilemap.m_Width+u;
+                            const int index = pTiles[tpos].m_Index;
+                            if (index <= 133)
+                            {
+                                if (index&COLFLAG_DEATH) pTiles[tpos].m_Index = TILE_DEATH;
+                                if (index&COLFLAG_SOLID) pTiles[tpos].m_Index = TILE_SOLID;
+                            }
+                        }
+                    }
+                }
+
+                Tilemap.m_Data = AddData(Tilemap.m_Width*Tilemap.m_Height*sizeof(CTile), pTiles);
+				AddItem(MAPITEMTYPE_LAYER, LayerCount++, sizeof(CMapItemLayerTilemap), &Tilemap);
+			}
+			else if (pLayer->m_Type == LAYERTYPE_QUADS)
+			{
+			    dbg_msg("CDataFileWriter", "saving quad layer");
+
+				CMapItemLayerQuads QLayer = *(reinterpret_cast<CMapItemLayerQuads*>(pLayer));
+				CQuad *pQuads = (CQuad *)pFileMap->GetDataSwapped(QLayer.m_Data);
+				QLayer.m_Data = AddDataSwapped(QLayer.m_NumQuads*sizeof(CQuad), pQuads);
+				AddItem(MAPITEMTYPE_LAYER, LayerCount++, sizeof(CMapItemLayerQuads), &QLayer);
+			}
+		}
+
+        dbg_msg("CDataFileWriter", "saving group");
+		AddItem(MAPITEMTYPE_GROUP, GroupCount++, sizeof(CMapItemGroup), pGroup);
+	}
+
+	// save envelopes
+	int StartEV, NumEV;
+	Count = 0;
+	pFileMap->GetType(MAPITEMTYPE_ENVELOPE, &StartEV, &NumEV);
+	for(int e = 0; e < NumEV; e++)
+	{
+	    dbg_msg("CDataFileWriter", "saving envelope");
+	    CMapItemEnvelope *pEnvelope = (CMapItemEnvelope*)pFileMap->GetItem(StartEV+e, 0, 0);
+		AddItem(MAPITEMTYPE_ENVELOPE, e, sizeof(CMapItemEnvelope), pEnvelope);
+		Count += pEnvelope->m_NumPoints;
+	}
+
+	// save points
+	int StartEP, NumEP;
+	pFileMap->GetType(MAPITEMTYPE_ENVPOINTS, &StartEP, &NumEP);
+	if (NumEP)
+	{
+		CEnvPoint *pPoints = (CEnvPoint *)pFileMap->GetItem(StartEP, 0, 0);
+		int TotalSizePoints = sizeof(CEnvPoint)*Count;
+		AddItem(MAPITEMTYPE_ENVPOINTS, 0, TotalSizePoints, pPoints);
+	}
+
+	// finish the data file
+	Finish();
+	dbg_msg("CDataFileWriter", "saving done");
+
+	return true;
 }

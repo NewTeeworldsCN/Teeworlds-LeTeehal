@@ -40,7 +40,6 @@ enum
 
 struct Scrap
 {
-    Scrap() { };
     int m_ID;
     int m_ScrapID;
     int m_Value;
@@ -73,26 +72,26 @@ public:
     ScrapInfo m_aScrapInfo[NUM_SCRAPS];
 
 public:
-    static void ConToothpaste(int ClientID, int ScrapID, void *pUser);
-    static void ConHairbrush(int ClientID, int ScrapID, void *pUser);
-    static void ConFlashbang(int ClientID, int ScrapID, void *pUser);
-    static void ConPickles(int ClientID, int ScrapID, void *pUser);
-    static void ConFish(int ClientID, int ScrapID, void *pUser);
-    static void ConMetalsheet(int ClientID, int ScrapID, void *pUser);
+    static void LCToothpaste(int ClientID, int ScrapID, void *pUser);
+    static void LCHairbrush(int ClientID, int ScrapID, void *pUser);
+    static void LCFlashbang(int ClientID, int ScrapID, void *pUser);
+    static void LCPickles(int ClientID, int ScrapID, void *pUser);
+    static void LCFish(int ClientID, int ScrapID, void *pUser);
+    static void LCMetalsheet(int ClientID, int ScrapID, void *pUser);
     
-    static void ConToy(int ClientID, int ScrapID, void *pUser);
-    static void ConCube(int ClientID, int ScrapID, void *pUser);
-    static void ConSign(int ClientID, int ScrapID, void *pUser);
-    static void ConPill(int ClientID, int ScrapID, void *pUser);
-    static void ConOldphone(int ClientID, int ScrapID, void *pUser);
-    static void ConRemote(int ClientID, int ScrapID, void *pUser);
+    static void LCToy(int ClientID, int ScrapID, void *pUser);
+    static void LCCube(int ClientID, int ScrapID, void *pUser);
+    static void LCSign(int ClientID, int ScrapID, void *pUser);
+    static void LCPill(int ClientID, int ScrapID, void *pUser);
+    static void LCOldphone(int ClientID, int ScrapID, void *pUser);
+    static void LCRemote(int ClientID, int ScrapID, void *pUser);
     
-    static void ConMagic7ball(int ClientID, int ScrapID, void *pUser);
-    static void ConShotgun(int ClientID, int ScrapID, void *pUser);
-    static void ConGoldbar(int ClientID, int ScrapID, void *pUser);
-    static void ConLamp(int ClientID, int ScrapID, void *pUser);
-    static void ConCashRegister(int ClientID, int ScrapID, void *pUser);
-    static void ConTeeth(int ClientID, int ScrapID, void *pUser);
+    static void LCMagic7ball(int ClientID, int ScrapID, void *pUser);
+    static void LCShotgun(int ClientID, int ScrapID, void *pUser);
+    static void LCGoldbar(int ClientID, int ScrapID, void *pUser);
+    static void LCLamp(int ClientID, int ScrapID, void *pUser);
+    static void LCCashRegister(int ClientID, int ScrapID, void *pUser);
+    static void LCTeeth(int ClientID, int ScrapID, void *pUser);
 
 private:
     class CGameContext *m_pGameServer;

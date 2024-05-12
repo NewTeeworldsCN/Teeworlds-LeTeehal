@@ -1,6 +1,6 @@
 #include "scrap-info.h"
 
-void CScrapInfo::ConToothpaste(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCToothpaste(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -24,14 +24,14 @@ void CScrapInfo::ConToothpaste(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConHairbrush(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCHairbrush(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
 
     pThis->SendChatTarget(ClientID, _("你用梳子梳了梳头发，神清气爽！"));
 }
 
-void CScrapInfo::ConFlashbang(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCFlashbang(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     vec2 Pos = pThis->GetPlayerChar(ClientID)->m_Pos;
@@ -40,7 +40,7 @@ void CScrapInfo::ConFlashbang(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("...不好(闪光瓶已损坏)"));
 }
 
-void CScrapInfo::ConPickles(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCPickles(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -64,7 +64,7 @@ void CScrapInfo::ConPickles(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConFish(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCFish(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -88,7 +88,7 @@ void CScrapInfo::ConFish(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConMetalsheet(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCMetalsheet(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -100,7 +100,7 @@ void CScrapInfo::ConMetalsheet(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConToy(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCToy(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -124,7 +124,7 @@ void CScrapInfo::ConToy(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConCube(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCCube(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
 
@@ -135,7 +135,7 @@ void CScrapInfo::ConCube(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConSign(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCSign(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -147,7 +147,7 @@ void CScrapInfo::ConSign(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConPill(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCPill(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -171,7 +171,7 @@ void CScrapInfo::ConPill(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConOldphone(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCOldphone(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -179,7 +179,7 @@ void CScrapInfo::ConOldphone(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("你拨打了电话... But nobody come"));
 }
 
-void CScrapInfo::ConRemote(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCRemote(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -187,7 +187,7 @@ void CScrapInfo::ConRemote(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("你按下了遥控器... 你仿佛听到远处有人在哀号"));
 }
 
-void CScrapInfo::ConMagic7ball(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCMagic7ball(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -199,7 +199,7 @@ void CScrapInfo::ConMagic7ball(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConShotgun(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCShotgun(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -211,7 +211,7 @@ void CScrapInfo::ConShotgun(int ClientID, int ScrapID, void *pUser)
     pP->EraseScrap(ScrapID);
 }
 
-void CScrapInfo::ConGoldbar(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCGoldbar(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -219,7 +219,7 @@ void CScrapInfo::ConGoldbar(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("这是金金金金金金金金条"));
 }
 
-void CScrapInfo::ConLamp(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCLamp(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -227,7 +227,7 @@ void CScrapInfo::ConLamp(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("绚丽台灯，我想在家里摆一个"));
 }
 
-void CScrapInfo::ConCashRegister(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCCashRegister(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     CPlayer *pP = pThis->m_apPlayers[ClientID];
@@ -235,7 +235,7 @@ void CScrapInfo::ConCashRegister(int ClientID, int ScrapID, void *pUser)
     pThis->SendChatTarget(ClientID, _("这是收银机，里面有银银银银银银银和金金金金金金金"));
 }
 
-void CScrapInfo::ConTeeth(int ClientID, int ScrapID, void *pUser)
+void CScrapInfo::LCTeeth(int ClientID, int ScrapID, void *pUser)
 {
     CGameContext *pThis = (CGameContext *)pUser;
     

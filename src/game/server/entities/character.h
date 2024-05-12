@@ -68,6 +68,13 @@ public:
 	void UpdateTuningParam();
 
 	int m_HookMode;
+	bool m_InShip;
+
+	// the player core for the physics
+	CCharacterCore m_Core;
+
+	int m_Health;
+	int m_Armor;
 private:
 	// player controlling this character
 	class CPlayer *m_pPlayer;
@@ -115,9 +122,6 @@ private:
 
 	int m_DamageTakenTick;
 
-	int m_Health;
-	int m_Armor;
-
 	// ninja
 	struct
 	{
@@ -126,9 +130,6 @@ private:
 		int m_CurrentMoveTime;
 		int m_OldVelAmount;
 	} m_Ninja;
-
-	// the player core for the physics
-	CCharacterCore m_Core;
 
 	// info for dead reckoning
 	int m_ReckoningTick; // tick that we are performing dead reckoning From

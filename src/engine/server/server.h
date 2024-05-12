@@ -243,6 +243,8 @@ public:
 public:
 	virtual const char* GetClientLanguage(int ClientID);
 	virtual void SetClientLanguage(int ClientID, const char* pLanguage);
+
+	virtual const char *NextMapName();
 };
 
 #endif

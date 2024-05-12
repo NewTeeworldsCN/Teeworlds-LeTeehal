@@ -300,6 +300,9 @@ CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
 
 	m_MapReload = 0;
 
+	m_MapGenerated = false;
+	m_LocateGame = LOCATE_LOBBY;
+
 	m_RconClientID = IServer::RCON_CID_SERV;
 	m_RconAuthLevel = AUTHED_ADMIN;
 
@@ -1206,25 +1209,23 @@ void CServer::PumpNetwork()
 
 char *CServer::GetMapName()
 {
+	auto Map = g_Config.m_SvMap;
 	// get the name of the map without his path
-	char *pMapShortName = &g_Config.m_SvMap[0];
-	for(int i = 0; i < str_length(g_Config.m_SvMap)-1; i++)
+	char *pMapShortName = &Map[0];
+	for(int i = 0; i < str_length(Map)-1; i++)
 	{
-		if(g_Config.m_SvMap[i] == '/' || g_Config.m_SvMap[i] == '\\')
-			pMapShortName = &g_Config.m_SvMap[i+1];
+		if(Map[i] == '/' || Map[i] == '\\')
+			pMapShortName = &Map[i+1];
 	}
 	return pMapShortName;
 }
 
 int CServer::LoadMap(const char *pMapName)
 {
-	//DATAFILE *df;
+	if (str_comp(pMapName, g_Config.m_SvMapGame) != 0)
+		m_MapGenerated = false;
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
-
-	/*df = datafile_load(buf);
-	if(!df)
-		return 0;*/
 
 	// check for valid standard map
 	if(!m_MapChecker.ReadAndValidateMap(Storage(), aBuf, IStorage::TYPE_ALL))
@@ -1337,7 +1338,8 @@ int CServer::Run()
 			int NewTicks = 0;
 
 			// load new map TODO: don't poll this
-			if(str_comp(g_Config.m_SvMap, m_aCurrentMap) != 0 || m_MapReload)
+			// if(str_comp(g_Config.m_SvMap, m_aCurrentMap) != 0 || m_MapReload)
+			if(m_MapReload)
 			{
 				m_MapReload = 0;
 
@@ -1362,12 +1364,13 @@ int CServer::Run()
 					Kernel()->ReregisterInterface(GameServer());
 					GameServer()->OnInit();
 					UpdateServerInfo();
+					// m_MapGenerated = false;
 				}
 				else
 				{
 					str_format(aBuf, sizeof(aBuf), "failed to load map. mapname='%s'", g_Config.m_SvMap);
 					Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-					str_copy(g_Config.m_SvMap, m_aCurrentMap, sizeof(g_Config.m_SvMap));
+					dbg_break();
 				}
 			}
 
@@ -1763,4 +1766,9 @@ int main(int argc, const char **argv) // ignore_convention
 	delete pStorage;
 	delete pConfig;
 	return 0;
+}
+
+const char *CServer::NextMapName()
+{
+	return g_Config.m_SvMap;
 }

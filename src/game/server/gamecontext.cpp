@@ -10,8 +10,12 @@
 #include <game/collision.h>
 #include <game/gamecore.h>
 #include "entities/scrap.h"
+#include <engine/shared/datafile.h> // MapGen
 
 #include <teeuniverses/components/localization.h>
+#include "entities/ship.h"
+
+#include <thread>
 
 enum
 {
@@ -26,6 +30,9 @@ void CGameContext::Construct(int Resetting)
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		m_apPlayers[i] = 0;
+
+	for(int i = 0; i < MAX_MONSTERS; i++)
+		m_apMonsters[i] = 0;
 
 	m_pController = 0;
 	m_VoteCloseTime = 0;
@@ -54,6 +61,8 @@ CGameContext::~CGameContext()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		delete m_apPlayers[i];
+	for(int i = 0; i < MAX_MONSTERS; i++)
+		delete m_apMonsters[i];
 	if(!m_Resetting)
 		delete m_pVoteOptionHeap;
 }
@@ -430,18 +439,6 @@ void CGameContext::SendTuningParams(int ClientID)
 
 void CGameContext::SwapTeams()
 {
-	if(!m_pController->IsTeamplay())
-		return;
-	
-	SendChat(-1, CGameContext::CHAT_ALL, "Teams were swapped");
-
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-	{
-		if(m_apPlayers[i] && m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
-			m_apPlayers[i]->SetTeam(m_apPlayers[i]->GetTeam()^1, false);
-	}
-
-	(void)m_pController->CheckTeamBalance();
 }
 
 void CGameContext::OnTick()
@@ -671,6 +668,9 @@ void CGameContext::OnClientConnected(int ClientID)
 
 void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 {
+	if(m_apPlayers[ClientID]->m_VoteStarted)
+		m_VoteStart--;
+
 	AbortVoteKickOnDisconnect(ClientID);
 	m_apPlayers[ClientID]->OnDisconnect(pReason);
 	delete m_apPlayers[ClientID];
@@ -768,6 +768,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				Console()->ExecuteLineFlag(pMsg->m_pMessage + 1, ClientID, CFGFLAG_CHAT);
 				
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
+
+				NewMonster(TYPE_PULLHANDLE);
 			}
 			else
 			{
@@ -879,6 +881,31 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					str_format(aCmd, sizeof(aCmd), "set_team %d -1 %d", SpectateID, g_Config.m_SvVoteSpectateRejoindelay);
 				}
 				
+				if(str_comp(aCmd, "qstart") == 0)
+				{
+					if(Server()->m_LocateGame == LOCATE_LOBBY)
+					{
+						if(m_apPlayers[ClientID]->m_VoteStarted)
+							SendChatTarget(ClientID, _("你取消了开始游戏的投票"));
+						else
+							SendChatTarget(ClientID, _("你发起了开始游戏的投票"));
+					}
+					else
+					{
+						if(m_apPlayers[ClientID]->m_VoteStarted)
+							SendChatTarget(ClientID, _("你取消了启动飞船的投票"));
+						else
+							SendChatTarget(ClientID, _("你发起了启动飞船的投票"));
+					}
+					// !false = true, !true = false. Toggle it.
+					m_apPlayers[ClientID]->m_VoteStarted = !m_apPlayers[ClientID]->m_VoteStarted;
+					// false = 0, 0 * 2 - 1 = -1; true = 1, 1 * 2 - 1 = 1;
+					// So, false = -1, true = 1(in here);
+					m_VoteStart += m_apPlayers[ClientID]->m_VoteStarted * 2 - 1;
+
+					ResetVotes(-1);
+				}
+
 				char aBuf[64];
 				for (int i = 0; i < m_apPlayers[ClientID]->m_vScraps.size(); i++)
 				{
@@ -897,10 +924,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						}
 						else
 						{
-							new CScrap(&m_World, 0, m_apPlayers[ClientID]->GetCharacter()->m_Pos, false, *m_apPlayers[ClientID]->m_vScraps[i]);
+							new CScrap(&m_World, 0, m_apPlayers[ClientID]->GetCharacter()->m_Pos, false, m_apPlayers[ClientID]->GetCharacter()->m_InShip, *m_apPlayers[ClientID]->m_vScraps[i]);
 							m_apPlayers[ClientID]->EraseScrap(m_apPlayers[ClientID]->m_vScraps[i]->m_ID);
 						}
-						return;
+
+						m_pController->m_pShip->UpdateValue();
 					}
 				}
 				
@@ -1031,6 +1059,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			pPlayer->m_LastKill = Server()->Tick();
 			pPlayer->KillCharacter(WEAPON_SELF);
 		}
+
+		ResetVotes(ClientID);
 	}
 	else
 	{
@@ -1157,18 +1187,6 @@ void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 
 void CGameContext::ConSetTeamAll(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	int Team = clamp(pResult->GetInteger(0), -1, 1);
-
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "All players were moved to the %s", pSelf->m_pController->GetTeamName(Team));
-	pSelf->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-		if(pSelf->m_apPlayers[i])
-			pSelf->m_apPlayers[i]->SetTeam(Team, false);
-
-	(void)pSelf->m_pController->CheckTeamBalance();
 }
 
 void CGameContext::ConSwapTeams(IConsole::IResult *pResult, void *pUserData)
@@ -1179,55 +1197,10 @@ void CGameContext::ConSwapTeams(IConsole::IResult *pResult, void *pUserData)
 
 void CGameContext::ConShuffleTeams(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!pSelf->m_pController->IsTeamplay())
-		return;
-
-	int CounterRed = 0;
-	int CounterBlue = 0;
-	int PlayerTeam = 0;
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-		if(pSelf->m_apPlayers[i] && pSelf->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
-			++PlayerTeam;
-	PlayerTeam = (PlayerTeam+1)/2;
-	
-	pSelf->SendChat(-1, CGameContext::CHAT_ALL, "Teams were shuffled");
-
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-	{
-		if(pSelf->m_apPlayers[i] && pSelf->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
-		{
-			if(CounterRed == PlayerTeam)
-				pSelf->m_apPlayers[i]->SetTeam(TEAM_BLUE, false);
-			else if(CounterBlue == PlayerTeam)
-				pSelf->m_apPlayers[i]->SetTeam(TEAM_RED, false);
-			else
-			{	
-				if(rand() % 2)
-				{
-					pSelf->m_apPlayers[i]->SetTeam(TEAM_BLUE, false);
-					++CounterBlue;
-				}
-				else
-				{
-					pSelf->m_apPlayers[i]->SetTeam(TEAM_RED, false);
-					++CounterRed;
-				}
-			}
-		}
-	}
-
-	(void)pSelf->m_pController->CheckTeamBalance();
 }
 
 void CGameContext::ConLockTeams(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	pSelf->m_LockTeams ^= 1;
-	if(pSelf->m_LockTeams)
-		pSelf->SendChat(-1, CGameContext::CHAT_ALL, "Teams were locked");
-	else
-		pSelf->SendChat(-1, CGameContext::CHAT_ALL, "Teams were unlocked");
 }
 
 void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData)
@@ -1604,6 +1577,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_World.SetGameServer(this);
 	m_Events.SetGameServer(this);
 
@@ -1614,9 +1588,12 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_Collision.Init(&m_Layers);
 	m_pScrapInfo = new CScrapInfo(this);
 	m_pScrapInfo->Init();
+	m_MapGen.Init(&m_Layers, &m_Collision, m_pStorage);
 
 	// select gametype
 	m_pController = new CGameController(this);
+
+	m_VoteStart = 0;
 
 	// create all entities from the game layer
 	CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
@@ -1692,6 +1669,13 @@ IGameServer *CreateGameServer() { return new CGameContext; }
 
 void CGameContext::ResetVotes(int ClientID)
 {
+	if(ClientID == -1)
+	{
+		for (int i = 0; i < MAX_PLAYER; i++)
+			ResetVotes(i);
+		return;
+	}
+
 	if(ClientID < 0 || ClientID >= MAX_PLAYER)
 		return;
 
@@ -1707,42 +1691,87 @@ void CGameContext::ResetVotes(int ClientID)
 	if (m_aPlayerVotes[ClientID].size())
 		return;
 
-	if (m_apPlayers[ClientID]->GetCharacter())
-		CreateSound(m_apPlayers[ClientID]->GetCharacter()->m_Pos, SOUND_PICKUP_ARMOR);
+	if (!m_apPlayers[ClientID]->GetCharacter())
+	{
+		AddVote(ClientID, "null", _("☪ 死人无法操作"));
+		return;
+	}
+
+	CreateSound(m_apPlayers[ClientID]->GetCharacter()->m_Pos, SOUND_PICKUP_ARMOR);
 
 	CPlayer *pP = m_apPlayers[ClientID];
-	AddVote(ClientID, "null", _("☪ 背包"));
-	AddVote(ClientID, "null", _("你可以在投票界面查看你的背包"));
-	AddVote(ClientID, "null", _("你可以通过投票使用背包里的物品"));
-	AddVote(ClientID, "null", _("或是把物品丢出去"));
-	AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
-	int Lb = 0;
-	int Value = 0;
-	for (int i = 0; i < pP->m_vScraps.size(); i++)
+	if(Server()->m_LocateGame == LOCATE_GAME)
 	{
-		if (pP->m_vScraps[i])
+		if(m_apPlayers[ClientID]->GetCharacter()->m_InShip)
 		{
-			Lb += pP->m_vScraps[i]->m_Weight;
-			Value += pP->m_vScraps[i]->m_Value;
+			AddVote(ClientID, "null", _("☪ 飞船"));
+			AddVote(ClientID, "null", _("投票把物品放在飞船里"));
+			int Num = m_pController->m_pShip->GetNum();
+			int Value = m_pController->m_pShip->GetValue();
+			AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
+			int Days = g_Config.m_GcDays;
+			int Money = g_Config.m_GcMoney;
+			int Quota = g_Config.m_GcQuota;
+			AddVote(ClientID, "null", _("### 剩余天数：{int:days}"), "days", &Days);
+			AddVote(ClientID, "null", _("### 指标：{int:money}/{int:quota}"), "money", &Money, "quota", &Quota);
+			AddVote(ClientID, "null", _("### 飞船内物品数量: {int:num}"), "num", &Num);
+			AddVote(ClientID, "null", _("### 飞船内物品总价值: {int:value}"), "value", &Value);
+			int NeedStart = GetNeedVoteStart();
+			AddVote(ClientID, "qstart", _("☞ 起飞 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
+		}
+		else
+		{
+			AddVote(ClientID, "null", _("☪ 背包"));
+			AddVote(ClientID, "null", _("你可以在投票界面查看你的背包"));
+			AddVote(ClientID, "null", _("投票理由为1尝试使用废品"));
+			AddVote(ClientID, "null", _("理由为空就放下废品"));
+		}
+		int Lb = 0;
+		int Value = 0;
+		for (int i = 0; i < pP->m_vScraps.size(); i++)
+		{
+			if (pP->m_vScraps[i])
+			{
+				Lb += pP->m_vScraps[i]->m_Weight;
+				Value += pP->m_vScraps[i]->m_Value;
+			}
+		}
+		pP->m_Score = Value;
+		pP->m_Weight = Lb;
+		AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
+		AddVote(ClientID, "null", _("背包内物品##总重量:{int:lb}镑,总价值:{int:value}元"), "lb", &Lb, "value", &Value);
+		AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
+		AddVote(ClientID, "null", _(".-=废品=-."));
+
+		for (int i = 0; i < pP->m_vScraps.size(); i++)
+		{
+			if (pP->m_vScraps[i])
+			{
+				char aBuf[32];
+				str_format(aBuf, sizeof(aBuf), "scrap %d", i);
+				//AddVote(ClientID, aBuf, _(aBuf));
+				AddVote(ClientID, aBuf, _("⊹ 废品:{str:name}, 价值{int:value}元, 重{int:weight}镑 "), "name", ScrapInfo()->GetScrapName(pP->m_vScraps[i]->m_ScrapID), "value", &pP->m_vScraps[i]->m_Value, "weight", &pP->m_vScraps[i]->m_Weight);
+			}
 		}
 	}
-	pP->m_Score = Value;
-	pP->m_Weight = Lb;
-	AddVote(ClientID, "null", _("总重量:{int:lb}镑,总价值:{int:value}元"), "lb", &Lb, "value", &Value);
-	AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
-	AddVote(ClientID, "null", _("理由为1则尝试使用废品"));
-	AddVote(ClientID, "null", _("为空则把废品遗弃"));
-	AddVote(ClientID, "null", _(".-=废品=-."));
-
-	for (int i = 0; i < pP->m_vScraps.size(); i++)
+	else
 	{
-		if (pP->m_vScraps[i])
-		{
-			char aBuf[32];
-			str_format(aBuf, sizeof(aBuf), "scrap %d", i);
-			//AddVote(ClientID, aBuf, _(aBuf));
-			AddVote(ClientID, aBuf, _("⊹ 废品:{str:name}, 价值{int:value}元, 重{int:weight}镑 "), "name", ScrapInfo()->GetScrapName(pP->m_vScraps[i]->m_ScrapID), "value", &pP->m_vScraps[i]->m_Value, "weight", &pP->m_vScraps[i]->m_Weight);
-		}
+		AddVote(ClientID, "null", _("☪ 游戏准备阶段"));
+		AddVote(ClientID, "null", _("---------------"));
+		int Rounds = g_Config.m_GcRounds;
+		int Days = g_Config.m_GcDays;
+		int Money = g_Config.m_GcMoney;
+		int Quota = g_Config.m_GcQuota;
+		AddVote(ClientID, "null", _("第{int:rounds}回"), "rounds", &Rounds);
+		AddVote(ClientID, "null", _("剩余天数：{int:days}"), "days", &Days);
+		AddVote(ClientID, "null", _("指标：{int:money}/{int:quota}"), "money", &Money, "quota", &Quota);
+		AddVote(ClientID, "null", _("如果没能在天数结束前达成指标..."));
+		AddVote(ClientID, "null", _("你就会被开除."));
+		AddVote(ClientID, "null", _("---------------"));
+		AddVote(ClientID, "null", _("游戏将在倒计时结束后开始"));
+		AddVote(ClientID, "null", _("在下方投票提前开始游戏"));
+		int NeedStart = GetNeedVoteStart();
+		AddVote(ClientID, "qstart", _("☞ 开始游戏 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
 	}
 	
 }
@@ -1816,12 +1845,84 @@ void CGameContext::ConHelp(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	int ClientID = pResult->GetClientID();
 	pSelf->SendChatTarget(ClientID, _("- - - - - - -"));
-	pSelf->SendChatTarget(ClientID, _("游戏分为两个阵营：调查员和怪物"));
-	pSelf->SendChatTarget(ClientID, _("调查员们要抢夺地图内的废品，怪物们要阻止调查员收集废品"));
-	pSelf->SendChatTarget(ClientID, _("只有抢到废品价值最高的调查员才能获得胜利"));
-	pSelf->SendChatTarget(ClientID, _("如果所有调查员都死了，那么怪物胜利;如果倒计时结束，且场上还有调查员存活，那么分数最高的调查员胜利"));
-	pSelf->SendChatTarget(ClientID, _("关系：调查员与怪物-天敌 调查员与调查员-竞争 怪物与怪物-合作"));
-	pSelf->SendChatTarget(ClientID, _("使用锤子捡起废品，投票里使用或遗弃废品"));
-	pSelf->SendChatTarget(ClientID, _("废品越重，你的速度就越慢，跳的就越低"));
+	pSelf->SendChatTarget(ClientID, _("游戏玩法同致命公司"));
+	pSelf->SendChatTarget(ClientID, _("在地图内收集废品并带回飞船"));
+	pSelf->SendChatTarget(ClientID, _("并在倒计时结束前回到飞船等待起飞"));
+	pSelf->SendChatTarget(ClientID, _("在飞船里投票可以进入飞船冬眠舱(不会挡到别人)"));
+	pSelf->SendChatTarget(ClientID, _("倒计时结束后飞船起飞，玩家回到主飞船"));
+	pSelf->SendChatTarget(ClientID, _("在主飞船内投票选择卖出物品"));
+	pSelf->SendChatTarget(ClientID, _("如果3天后没能达成指标就会被开除"));
 	pSelf->SendChatTarget(ClientID, _("- - - - - - -"));
+}
+
+// MapGen
+void CGameContext::SaveMap(const char *path)
+{
+	IMap *pMap = Layers()->Map();
+	if (!pMap)
+		return;
+
+	CDataFileWriter fileWrite;
+	char aMapFile[512];
+	str_format(aMapFile, sizeof(aMapFile), "maps/%s.map", g_Config.m_SvMapGame);
+
+	// Map will be saved to current dir, not to ~/.ninslash/maps or to data/maps, so we need to create a dir for it
+	Storage()->CreateFolder("maps", IStorage::TYPE_SAVE);
+
+	fileWrite.SaveMap(Storage(), pMap->GetFileReader(), aMapFile);
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Map saved in '%s'!", aMapFile);
+	Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+}
+
+void CGameContext::GenIt(CGameContext *pThis)
+{
+	pThis->MapGen()->FillMap();
+	pThis->SaveMap("");
+	
+	pThis->Server()->m_MapGenerated = true;
+	str_copy(g_Config.m_SvMap, g_Config.m_SvMapGame, sizeof(g_Config.m_SvMap));
+}
+
+void CGameContext::GenTheMap()
+{
+	std::thread(&GenIt, this).detach();
+}
+
+
+// Monster
+
+CMonster *CGameContext::GetValidMonster(int MonsterID) const
+{
+    if(MonsterID >= MAX_MONSTERS || MonsterID < 0)
+        return 0;
+
+    if(!m_apMonsters[MonsterID])
+        return 0;
+
+    return m_apMonsters[MonsterID];
+}
+
+bool CGameContext::IsValidPlayer(int PlayerID)
+{
+    if(PlayerID >= MAX_CLIENTS || PlayerID < 0)
+        return false;
+
+    if(!m_apPlayers[PlayerID])
+        return false;
+
+    return true;
+}
+
+void CGameContext::NewMonster(int Type)
+{
+	for(int i = 0; i < MAX_MONSTERS; i ++)
+	{
+	    if(!GetValidMonster(i))
+	    {
+	        m_apMonsters[i] = new CMonster(&m_World, Type, i, 1, 1, 0);
+			break;
+	    }
+	}
 }

@@ -20,13 +20,30 @@ void Rotate(vec2 *vertex, float x_orig, float y_orig, float angle)
     vertex->y = ynew + y_orig;
 }
 
-CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, Scrap S) : CEntity(pGameWorld, CGameWorld::ENTTYPE_SCRAP)
+CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, bool InShip, Scrap S) : CEntity(pGameWorld, CGameWorld::ENTTYPE_SCRAP)
 {
     m_Pos = Pos;
     m_Level = Level;
-    m_Hide = false;
     m_Random = Random;
-    m_ScrapType = rand()%NUM_SCRAPS;
+    m_InShip = InShip;
+    switch (Level)
+    {
+    case ENTITY_SCRAP_L1:
+        m_ScrapType = rand()%END_SCRAP_L1;
+        break;
+
+    case ENTITY_SCRAP_L2:
+        m_ScrapType = (rand()%(END_SCRAP_L2-END_SCRAP_L1))+END_SCRAP_L1;
+        break;
+
+    case ENTITY_SCRAP_L3:
+        m_ScrapType = (rand()%(END_SCRAP_L3-END_SCRAP_L2))+END_SCRAP_L2;
+        break;
+    
+    default:
+        m_ScrapType = (rand()%(END_SCRAP_L2-END_SCRAP_L1))+END_SCRAP_L1;
+        break;
+    }
     if(Random)
         GameServer()->ScrapInfo()->RandomScrap(m_ScrapType, m_ScrapValue, m_Weight);
     else
@@ -52,19 +69,12 @@ CScrap::~CScrap()
 
 void CScrap::Reset()
 {
-    if(m_Random)
-        GameServer()->ScrapInfo()->RandomScrap(m_ScrapType, m_ScrapValue, m_Weight);
-    else
-        GameWorld()->DestroyEntity(this);
-    m_Hide = false;
+    GameWorld()->DestroyEntity(this);
 }
 
 void CScrap::Tick()
 {
-    if(!m_Random && m_Hide)
-        Reset();
-
-    if(m_Hide || GameWorld()->m_Paused || GameServer()->m_pController->IsGameOver())
+    if(GameWorld()->m_Paused || GameServer()->m_pController->IsGameOver())
         return;
 
     vec2 NewPos;
@@ -73,7 +83,7 @@ void CScrap::Tick()
     {
         int ClientID = TargetChr->GetPlayer()->GetCID();
 
-        GameServer()->SendBroadcast(ClientID, 200, 10, 
+        GameServer()->SendBroadcast(ClientID, BROADCAST_PRIORITY_EFFECTSTATE, 10, 
             _("废品:{str:Name}\n价值:{int:Value}\n重量:{int:Weight}\n使用锤子捡起物品"), 
             "Name", GameServer()->ScrapInfo()->GetScrapName(m_ScrapType), 
             "Value", &m_ScrapValue, "Weight", &m_Weight);
@@ -83,9 +93,6 @@ void CScrap::Tick()
 bool CScrap::Pickup(int ClientID)
 {
     if(ClientID > MAX_CLIENTS || ClientID < 0 || !GameServer()->m_apPlayers[ClientID])
-        return false;
-
-    if(m_Hide)
         return false;
     
     Scrap *Temp = new Scrap();
@@ -101,12 +108,11 @@ bool CScrap::Pickup(int ClientID)
 
 void CScrap::TickPaused()
 {
-    // pass
 }
 
 void CScrap::Snap(int SnappingClient)
 {
-    if (NetworkClipped(SnappingClient) || m_Hide)
+    if (NetworkClipped(SnappingClient))
         return;
 
     {
@@ -129,7 +135,8 @@ void CScrap::Snap(int SnappingClient)
         vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4)),
         vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4))};
 
-    m_Angle += ((float)m_ScrapValue) / 48.f;
+    if(!GameWorld()->m_Paused)
+        m_Angle += ((float)m_ScrapValue) / 64.f;
 
     for (int i = 0; i < 4; i++)
     {

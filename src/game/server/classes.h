@@ -36,6 +36,24 @@ struct Classes
         case PLAYERCLASS_HUMAN:
             return 10;
 
+        case PLAYERCLASS_HOARDINGBUG:
+            return 4;
+
+        case PLAYERCLASS_BUNKERSPIDER:
+            return 8;
+
+        case PLAYERCLASS_NUTCRACKER:
+            return 5;
+
+        case PLAYERCLASS_THUMPER:
+            return 4;
+
+        case PLAYERCLASS_SNAREFLEA:
+            return 3;
+
+        case PLAYERCLASS_BRACKEN:
+            return 1;
+
         default:
             return 3;
         }

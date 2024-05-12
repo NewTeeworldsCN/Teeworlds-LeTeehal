@@ -19,6 +19,11 @@
 
 #include "scrap-info.h"
 
+#include <engine/storage.h> // MapGen
+
+#include "mapgen.h"
+
+#include "entities/monster.h"
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -63,6 +68,8 @@ class CGameContext : public IGameServer
 	CNetObjHandler m_NetObjHandler;
 	CTuningParams m_Tuning;
 	class CScrapInfo *m_pScrapInfo;
+	CMapGen m_MapGen;
+	IStorage *m_pStorage;
 
 	static void ConsoleOutputCallback_Chat(const char *pStr, void *pUser);
 
@@ -104,6 +111,9 @@ public:
 	CCollision *Collision() { return &m_Collision; }
 	CTuningParams *Tuning() { return &m_Tuning; }
 	class CScrapInfo *ScrapInfo() { return m_pScrapInfo; }
+	CLayers *Layers() { return &m_Layers; }
+	IStorage *Storage() const { return m_pStorage; }
+	CMapGen *MapGen() { return &m_MapGen; }
 
 	CGameContext();
 	~CGameContext();
@@ -235,6 +245,27 @@ public:
 		char m_aTimedMessage[1024];
 	};
 	CBroadcastState m_aBroadcastStates[MAX_PLAYER];
+
+	int m_VoteStart;
+	int GetNeedVoteStart()
+	{
+		return ((int)((m_VoteStart/3)*2)) + 1;
+	}
+
+	// MapGen
+	virtual void SaveMap(const char *path);
+
+	void GenTheMap();
+
+	static void GenIt(CGameContext *pThis);
+
+	// Monster Neox
+	CMonster *m_apMonsters[MAX_MONSTERS];
+    CMonster *GetValidMonster(int MonsterID) const;
+	void OnMonsterDeath(int MonsterID);
+	bool IsValidPlayer(int PlayerID);
+
+	void NewMonster(int Type);
 };
 
 inline int CmaskAll() { return -1; }

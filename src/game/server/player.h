@@ -118,7 +118,9 @@ public:
 	void RandomChooseClass();
 
 	int m_Hand;
-	void DropAllScrap(vec2 Pos);
+	void DropAllScrap(vec2 Pos, bool InShip);
+
+	bool m_VoteStarted;
 private:
 	CCharacter *m_pCharacter;
 	CGameContext *m_pGameServer;

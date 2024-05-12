@@ -9,6 +9,7 @@
 #include "gamecontext.h"
 
 #include "entities/pickup.h"
+#include "entities/ship.h"
 #include "classes.h"
 //#include "scrap-info.h"
 
@@ -21,8 +22,6 @@ CGameController::CGameController(class CGameContext *pGameServer)
 	//
 	DoWarmup(g_Config.m_SvWarmup);
 	m_UnpauseTimer = 0;
-	m_GameOverTick = -1;
-	m_SuddenDeath = 0;
 	m_RoundStartTick = Server()->Tick();
 	m_RoundCount = 0;
 	m_GameFlags = 0;
@@ -37,7 +36,13 @@ CGameController::CGameController(class CGameContext *pGameServer)
 	m_aNumSpawnPoints[1] = 0;
 	m_aNumSpawnPoints[2] = 0;
 
-	EndRound();
+	m_PrepareTick = 50;
+
+	m_LaunchShip = false;
+	m_ReloadTick = 0;
+
+	m_MonsterSpawnNum = 0;
+	m_MonsterSpawnCurrentNum = 0;
 }
 
 CGameController::~CGameController()
@@ -105,20 +110,6 @@ bool CGameController::CanSpawn(int Team, vec2 *pOutPos)
 	if(Team == TEAM_SPECTATORS)
 		return false;
 
-	if(IsTeamplay())
-	{
-		Eval.m_FriendlyTeam = Team;
-
-		// first try own team spawn, then normal spawn and then enemy
-		EvaluateSpawnType(&Eval, 1+(Team&1));
-		if(!Eval.m_Got)
-		{
-			EvaluateSpawnType(&Eval, 0);
-			if(!Eval.m_Got)
-				EvaluateSpawnType(&Eval, 1+((Team+1)&1));
-		}
-	}
-	else
 	{
 		EvaluateSpawnType(&Eval, 0);
 		EvaluateSpawnType(&Eval, 1);
@@ -140,6 +131,7 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	{
 	case ENTITY_SPAWN:
 		m_aaSpawnPoints[0][m_aNumSpawnPoints[0]++] = Pos;
+		m_aMonsterSpawnPos.add(Pos);
 		break;
 	
 	case ENTITY_SPAWN_RED:
@@ -186,10 +178,18 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	}
 	break;
 
-	case SCRAP_L1:
-	case SCRAP_L2:
-	case SCRAP_L3:
-		new CScrap(&GameServer()->m_World, Index, Pos, true, Useless);
+	case ENTITY_SCRAP_L1:
+	case ENTITY_SCRAP_L2:
+	case ENTITY_SCRAP_L3:
+		new CScrap(&GameServer()->m_World, Index, Pos, true, false, Useless);
+		break;
+	
+	case ENTITY_SHIP:
+		m_pShip = new CShip(&GameServer()->m_World, Pos);
+		break;
+
+	case ENTITY_MONSTER_SPAWN:
+		//m_aMonsterSpawnPos.add(Pos);
 		break;
 	default:
 		break;
@@ -208,36 +208,17 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 
 void CGameController::EndRound()
 {
-	if(m_Warmup) // game can't end when we are running warmup
+	if(m_LaunchShip)
 		return;
 
-	GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("游戏结束！胜利者是{str:name}!"), "name", m_TopPlayerName);
-	GameServer()->SendChatTarget(-1, _("游戏结束！胜利者是{str:name}!"), "name", m_TopPlayerName);
-	m_GameOverTick = Server()->Tick();
-	m_SuddenDeath = 0;
+	GameServer()->SendChatTarget(-1, _("[警告]为保证公司利益最大化，飞船已起飞"));
+	m_LaunchShip = true;
+	g_Config.m_GcMoney = g_Config.m_GcValueShip = m_pShip->GetValue();
 }
 
 void CGameController::ResetGame()
 {
-	GameServer()->m_World.m_ResetRequested = true;
-}
-
-const char *CGameController::GetTeamName(int Team)
-{
-	if(IsTeamplay())
-	{
-		if(Team == TEAM_RED)
-			return "red team";
-		else if(Team == TEAM_BLUE)
-			return "blue team";
-	}
-	else
-	{
-		if(Team == 0)
-			return "game";
-	}
-
-	return "spectators";
+	// GameServer()->m_World.m_ResetRequested = true;
 }
 
 static bool IsSeparator(char c) { return c == ';' || c == ' ' || c == ',' || c == '\t'; }
@@ -247,11 +228,8 @@ void CGameController::StartRound()
 	ResetGame();
 
 	m_RoundStartTick = Server()->Tick();
-	m_SuddenDeath = 0;
 	m_GameOverTick = -1;
 	GameServer()->m_World.m_Paused = false;
-	m_aTeamscore[TEAM_RED] = 0;
-	m_aTeamscore[TEAM_BLUE] = 0;
 	for (int i = 0; i < MAX_PLAYER; i++)
 	{
 		if(!GameServer()->m_apPlayers[i])
@@ -263,11 +241,7 @@ void CGameController::StartRound()
 		GameServer()->m_apPlayers[i]->m_Class = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
 	}
-	m_ForceBalanced = false;
 	Server()->DemoRecorder_HandleAutoStart();
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "start round type='%s' teamplay='%d'", m_pGameType, m_GameFlags&GAMEFLAG_TEAMS);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 }
 
 void CGameController::ChangeMap(const char *pToMap)
@@ -278,78 +252,7 @@ void CGameController::ChangeMap(const char *pToMap)
 
 void CGameController::CycleMap()
 {
-	if(m_aMapWish[0] != 0)
-	{
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "rotating map to %s", m_aMapWish);
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-		str_copy(g_Config.m_SvMap, m_aMapWish, sizeof(g_Config.m_SvMap));
-		m_aMapWish[0] = 0;
-		m_RoundCount = 0;
-		return;
-	}
-	if(!str_length(g_Config.m_SvMaprotation))
-		return;
 
-	if(m_RoundCount < g_Config.m_SvRoundsPerMap-1)
-	{
-		if(g_Config.m_SvRoundSwap)
-			GameServer()->SwapTeams();
-		return;
-	}
-
-	// handle maprotation
-	const char *pMapRotation = g_Config.m_SvMaprotation;
-	const char *pCurrentMap = g_Config.m_SvMap;
-
-	int CurrentMapLen = str_length(pCurrentMap);
-	const char *pNextMap = pMapRotation;
-	while(*pNextMap)
-	{
-		int WordLen = 0;
-		while(pNextMap[WordLen] && !IsSeparator(pNextMap[WordLen]))
-			WordLen++;
-
-		if(WordLen == CurrentMapLen && str_comp_num(pNextMap, pCurrentMap, CurrentMapLen) == 0)
-		{
-			// map found
-			pNextMap += CurrentMapLen;
-			while(*pNextMap && IsSeparator(*pNextMap))
-				pNextMap++;
-
-			break;
-		}
-
-		pNextMap++;
-	}
-
-	// restart rotation
-	if(pNextMap[0] == 0)
-		pNextMap = pMapRotation;
-
-	// cut out the next map
-	char aBuf[512] = {0};
-	for(int i = 0; i < 511; i++)
-	{
-		aBuf[i] = pNextMap[i];
-		if(IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
-		{
-			aBuf[i] = 0;
-			break;
-		}
-	}
-
-	// skip spaces
-	int i = 0;
-	while(IsSeparator(aBuf[i]))
-		i++;
-
-	m_RoundCount = 0;
-
-	char aBufMsg[256];
-	str_format(aBufMsg, sizeof(aBufMsg), "rotating map to %s", &aBuf[i]);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-	str_copy(g_Config.m_SvMap, &aBuf[i], sizeof(g_Config.m_SvMap));
 }
 
 void CGameController::PostReset()
@@ -368,21 +271,6 @@ void CGameController::PostReset()
 
 void CGameController::OnPlayerInfoChange(class CPlayer *pP)
 {
-	const int aTeamColors[2] = {65387, 10223467};
-	if(IsTeamplay())
-	{
-		pP->m_TeeInfos.m_UseCustomColor = 1;
-		if(pP->GetTeam() >= TEAM_RED && pP->GetTeam() <= TEAM_BLUE)
-		{
-			pP->m_TeeInfos.m_ColorBody = aTeamColors[pP->GetTeam()];
-			pP->m_TeeInfos.m_ColorFeet = aTeamColors[pP->GetTeam()];
-		}
-		else
-		{
-			pP->m_TeeInfos.m_ColorBody = 12895054;
-			pP->m_TeeInfos.m_ColorFeet = 12895054;
-		}
-	}
 }
 
 
@@ -394,12 +282,8 @@ int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 	if(pKiller == pVictim->GetPlayer())
 		pVictim->GetPlayer()->m_Score--; // suicide
 	else
-	{
-		if(IsTeamplay() && pVictim->GetPlayer()->GetTeam() == pKiller->GetTeam())
-			pKiller->m_Score--; // teamkill
-		else
-			pKiller->m_Score++; // normal kill
-	}
+		pKiller->m_Score++; // normal kill
+
 	if(Weapon == WEAPON_SELF)
 		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3.0f;
 	return 0;
@@ -476,151 +360,107 @@ bool CGameController::CanBeMovedOnBalance(int ClientID)
 
 void CGameController::Tick()
 {
-	int CountPlayer = 0;
-	for (int i = 0; i < MAX_PLAYER; i++)
+	if(!m_LaunchShip)
+		m_GameOverTick = Server()->Tick();
+	
+	if(Server()->m_LocateGame == LOCATE_LOBBY && m_LaunchShip)
 	{
-		if(!GameServer()->m_apPlayers[i])
-			continue;
-
-		CountPlayer++;	
-	}
-
-	if(CountPlayer < 2)
-		m_RoundStartTick = Server()->Tick();
-
-	// do warmup
-	if(!GameServer()->m_World.m_Paused && m_Warmup && CountPlayer >= g_Config.m_SvLessPlayerStart)
-	{
-		m_Warmup--;
-		if(!m_Warmup)
-			StartRound();
-	}
-
-	if(m_GameOverTick != -1)
-	{
-		if(CountPlayer < g_Config.m_SvLessPlayerStart)
-			GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("需要至少{int:num}名玩家才能启动游戏"), "num", &g_Config.m_SvLessPlayerStart);
-		else if(Server()->Tick() > m_GameOverTick+Server()->TickSpeed()*4)
+		m_GameOverTick = Server()->Tick();
+		if(Server()->m_MapGenerated)
 		{
-			CycleMap();
-			StartRound();
-			m_RoundCount++;
+			m_ReloadTick = 100;
+			GameServer()->SendChatTarget(-1 ,_("地图生成完毕！飞船即将起飞..."));
+			GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE);
+			Server()->m_LocateGame = LOCATE_GAME;
 		}
 	}
-	else if(GameServer()->m_World.m_Paused && m_UnpauseTimer)
+
+	if(m_ReloadTick > 0)
 	{
-		--m_UnpauseTimer;
-		if(!m_UnpauseTimer)
-			GameServer()->m_World.m_Paused = false;
+		m_ReloadTick--; // c = 1, c--
+		if(m_ReloadTick == 0) // c == 0
+		{
+			GameServer()->Console()->ExecuteLine("reload", -1);;
+			m_ReloadTick--; // c == -1, c > 0(false), c == 0(false)
+		}
 	}
+
+	if(Server()->m_LocateGame == LOCATE_LOBBY && !m_LaunchShip)
+	{
+		if(
+			// Time end.
+			(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
+			|| 
+			// Vote passed.
+			(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart())
+		)
+		{
+			bool Game = false;
+			GameServer()->m_VoteStart = 0;
+			if(!g_Config.m_GcDays)
+			{
+				g_Config.m_GcDays = 3;
+				if(g_Config.m_GcMoney >= g_Config.m_GcQuota)
+				{
+					g_Config.m_GcDays = 3;
+					g_Config.m_GcRounds++;
+					g_Config.m_GcQuota = g_Config.m_GcRounds*300+20*g_Config.m_GcRounds;
+					GameServer()->SendChatTarget(-1, _("你们没有被解雇，你们会继续在这里工作."));
+					Game = true;
+				}
+				else
+				{
+					GameServer()->SendChatTarget(-1, _("你们没能达成指标..."));
+					GameServer()->SendChatTarget(-1, _("你们被解雇了."));
+					g_Config.m_GcDays = 3;
+					g_Config.m_GcRounds = 1;
+					g_Config.m_GcQuota = 300;
+					Server()->m_LocateGame = LOCATE_LOBBY;
+					m_ReloadTick = 150;
+					Game = false;
+				}
+			}
+			else
+			{
+				Game = true;
+				g_Config.m_GcDays--;
+			}
+			if(Game)
+			{
+				GameServer()->GenTheMap();
+				GameServer()->SendChatTarget(-1, _("游戏地图生成中..."));
+				m_LaunchShip = true;
+			}
+
+		}
+		GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你现在在：飞船\n在投票界面进行游戏选择"));
+		return;
+	}
+
+	if(Server()->Tick() - m_GameOverTick >= 100 && m_LaunchShip && Server()->m_LocateGame == LOCATE_GAME)
+	{
+		Server()->m_LocateGame = LOCATE_LOBBY;
+		str_copy(g_Config.m_SvMap, g_Config.m_SvMapLobby, sizeof(g_Config.m_SvMap));
+		GameServer()->Console()->ExecuteLine("reload", -1);
+	}
+
+	if(m_PrepareTick > 0)
+	{
+		m_RoundStartTick = Server()->Tick();
+		m_PrepareTick--; // c = 1, c--
+		if(m_PrepareTick == 0) // c == 0
+		{
+			StartRound();
+			m_PrepareTick--; // c == -1, c > 0(false), c == 0(false)
+		}
+	}
+	
 
 	// game is Paused
 	if(GameServer()->m_World.m_Paused)
 		++m_RoundStartTick;
 
-	// do team-balancing
-	if(IsTeamplay() && m_UnbalancedTick != -1 && Server()->Tick() > m_UnbalancedTick+g_Config.m_SvTeambalanceTime*Server()->TickSpeed()*60)
-	{
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", "Balancing teams");
-
-		int aT[2] = {0,0};
-		float aTScore[2] = {0,0};
-		float aPScore[MAX_CLIENTS] = {0.0f};
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS)
-			{
-				aT[GameServer()->m_apPlayers[i]->GetTeam()]++;
-				aPScore[i] = GameServer()->m_apPlayers[i]->m_Score*Server()->TickSpeed()*60.0f/
-					(Server()->Tick()-GameServer()->m_apPlayers[i]->m_ScoreStartTick);
-				aTScore[GameServer()->m_apPlayers[i]->GetTeam()] += aPScore[i];
-			}
-		}
-
-		// are teams unbalanced?
-		if(absolute(aT[0]-aT[1]) >= 2)
-		{
-			int M = (aT[0] > aT[1]) ? 0 : 1;
-			int NumBalance = absolute(aT[0]-aT[1]) / 2;
-
-			do
-			{
-				CPlayer *pP = 0;
-				float PD = aTScore[M];
-				for(int i = 0; i < MAX_CLIENTS; i++)
-				{
-					if(!GameServer()->m_apPlayers[i] || !CanBeMovedOnBalance(i))
-						continue;
-					// remember the player who would cause lowest score-difference
-					if(GameServer()->m_apPlayers[i]->GetTeam() == M && (!pP || absolute((aTScore[M^1]+aPScore[i]) - (aTScore[M]-aPScore[i])) < PD))
-					{
-						pP = GameServer()->m_apPlayers[i];
-						PD = absolute((aTScore[M^1]+aPScore[i]) - (aTScore[M]-aPScore[i]));
-					}
-				}
-
-				// move the player to the other team
-				int Temp = pP->m_LastActionTick;
-				pP->SetTeam(M^1);
-				pP->m_LastActionTick = Temp;
-
-				pP->Respawn();
-				pP->m_ForceBalanced = true;
-			} while (--NumBalance);
-
-			m_ForceBalanced = true;
-		}
-		m_UnbalancedTick = -1;
-	}
-
-	// check for inactive players
-	if(g_Config.m_SvInactiveKickTime > 0)
-	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-		{
-			if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && !Server()->IsAuthed(i))
-			{
-				if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick+g_Config.m_SvInactiveKickTime*Server()->TickSpeed()*60)
-				{
-					switch(g_Config.m_SvInactiveKick)
-					{
-					case 0:
-						{
-							// move player to spectator
-							GameServer()->m_apPlayers[i]->SetTeam(TEAM_SPECTATORS);
-						}
-						break;
-					case 1:
-						{
-							// move player to spectator if the reserved slots aren't filled yet, kick him otherwise
-							int Spectators = 0;
-							for(int j = 0; j < MAX_CLIENTS; ++j)
-								if(GameServer()->m_apPlayers[j] && GameServer()->m_apPlayers[j]->GetTeam() == TEAM_SPECTATORS)
-									++Spectators;
-							if(Spectators >= g_Config.m_SvSpectatorSlots)
-								Server()->Kick(i, "Kicked for inactivity");
-							else
-								GameServer()->m_apPlayers[i]->SetTeam(TEAM_SPECTATORS);
-						}
-						break;
-					case 2:
-						{
-							// kick the player
-							Server()->Kick(i, "Kicked for inactivity");
-						}
-					}
-				}
-			}
-		}
-	}
-
 	DoWincheck();
-}
-
-
-bool CGameController::IsTeamplay() const
-{
-	return m_GameFlags&GAMEFLAG_TEAMS;
 }
 
 void CGameController::Snap(int SnappingClient)
@@ -660,8 +500,6 @@ int CGameController::GetAutoTeam(int NotThisID)
 	}
 
 	int Team = 0;
-	if(IsTeamplay())
-		Team = aNumplayers[TEAM_RED] > aNumplayers[TEAM_BLUE] ? TEAM_BLUE : TEAM_RED;
 
 	if(CanJoinTeam(Team, NotThisID))
 		return Team;
@@ -688,40 +526,13 @@ bool CGameController::CanJoinTeam(int Team, int NotThisID)
 
 bool CGameController::CheckTeamBalance()
 {
-	if(!IsTeamplay() || !g_Config.m_SvTeambalanceTime)
-		return true;
-
-	int aT[2] = {0, 0};
-	for(int i = 0; i < MAX_CLIENTS; i++)
-	{
-		CPlayer *pP = GameServer()->m_apPlayers[i];
-		if(pP && pP->GetTeam() != TEAM_SPECTATORS)
-			aT[pP->GetTeam()]++;
-	}
-
-	char aBuf[256];
-	if(absolute(aT[0]-aT[1]) >= 2)
-	{
-		str_format(aBuf, sizeof(aBuf), "Teams are NOT balanced (red=%d blue=%d)", aT[0], aT[1]);
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-		if(GameServer()->m_pController->m_UnbalancedTick == -1)
-			GameServer()->m_pController->m_UnbalancedTick = Server()->Tick();
-		return false;
-	}
-	else
-	{
-		str_format(aBuf, sizeof(aBuf), "Teams are balanced (red=%d blue=%d)", aT[0], aT[1]);
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-		GameServer()->m_pController->m_UnbalancedTick = -1;
-		return true;
-	}
 }
 
 bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam)
 {
 	int aT[2] = {0, 0};
 
-	if (!IsTeamplay() || JoinTeam == TEAM_SPECTATORS || !g_Config.m_SvTeambalanceTime)
+	if (JoinTeam == TEAM_SPECTATORS || !g_Config.m_SvTeambalanceTime)
 		return true;
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -751,52 +562,16 @@ bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam)
 
 void CGameController::DoWincheck()
 {
-	if(m_GameOverTick == -1 && !m_Warmup && !GameServer()->m_World.m_ResetRequested)
-	{
-		// gather some stats
-		int CountHuman = 0;
-		int Topscore = 0;
-		int TopscoreCount = 0;
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(GameServer()->m_apPlayers[i])
-			{
-				if(GameServer()->m_apPlayers[i]->m_Score > Topscore)
-				{
-					Topscore = GameServer()->m_apPlayers[i]->m_Score;
-					TopscoreCount = 1;
-					str_copy(m_TopPlayerName, Server()->ClientName(i), sizeof(m_TopPlayerName));
-				}
-				else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
-					TopscoreCount++;
-				
-				if(GameServer()->m_apPlayers[i]->m_Class == 0)
-					CountHuman++;
-			}
-		}
-		
-		if(!CountHuman)
-		{
-			str_copy(m_TopPlayerName, "怪物们", sizeof(m_TopPlayerName));
-			EndRound();
-			return;
-		}
-
-		// check win
-		if (g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
-		{
-			if(TopscoreCount == 1 && CountHuman)
-				EndRound();
-		}
-
-	}
+	// check win
+	if (g_Config.m_SvTimelimit > 0 && 
+	(Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60 || GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart())
+		EndRound();
 }
+
 
 int CGameController::ClampTeam(int Team)
 {
 	if(Team < 0)
 		return TEAM_SPECTATORS;
-	if(IsTeamplay())
-		return Team&1;
 	return 0;
 }

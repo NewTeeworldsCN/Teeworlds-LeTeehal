@@ -5,6 +5,7 @@
 #include "generated/nethash.cpp"
 #define GAME_VERSION "0.6.4 Lethal"
 #define GAME_NETVERSION "0.6 626fce9a778df4d4"
+#define GAME_RELEASE_VERSION "0.6.4"
 
 #define MOD_NAME "LeTeehal Company 致命公司"
 #define MOD_VERSION "0.1.0"
