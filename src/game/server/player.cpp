@@ -3,7 +3,6 @@
 #include <new>
 #include <engine/shared/config.h>
 #include "player.h"
-#include "classes.h"
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
 
@@ -137,49 +136,10 @@ void CPlayer::Snap(int SnappingClient)
 	StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
 	pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
 	pClientInfo->m_UseCustomColor = 1;
-	pClientInfo->m_ColorBody = 0000000;
-	pClientInfo->m_ColorFeet = 0000000;
-	switch (m_Class)
-	{
-	case PLAYERCLASS_HUMAN:
-		StrToInts(&pClientInfo->m_Skin0, 6, "twintri");
-		StrToInts(&pClientInfo->m_Clan0, 3, "调查员");
-		pClientInfo->m_ColorBody = 3276544;
-		pClientInfo->m_ColorFeet = 3276544;
-		break;
-
-	case PLAYERCLASS_HOARDINGBUG:
-		StrToInts(&pClientInfo->m_Skin0, 6, "mouse");
-		StrToInts(&pClientInfo->m_Clan0, 3, "囤积虫");
-		break;
-
-	case PLAYERCLASS_BUNKERSPIDER:
-		StrToInts(&pClientInfo->m_Skin0, 6, "nersif");
-		StrToInts(&pClientInfo->m_Clan0, 3, "蜘蛛");
-		break;
-
-	case PLAYERCLASS_NUTCRACKER:
-		StrToInts(&pClientInfo->m_Skin0, 6, "antiantey");
-		StrToInts(&pClientInfo->m_Clan0, 3, "英卫队");
-		break;
-
-	case PLAYERCLASS_THUMPER:
-		StrToInts(&pClientInfo->m_Skin0, 6, "coala_x_ninja");
-		StrToInts(&pClientInfo->m_Clan0, 3, "半身鱼");
-		break;
-	
-	case PLAYERCLASS_SNAREFLEA:
-		StrToInts(&pClientInfo->m_Skin0, 6, "hammie-chew");
-		StrToInts(&pClientInfo->m_Clan0, 3, "抱脸虫");
-		break;
-
-	case PLAYERCLASS_BRACKEN:
-		StrToInts(&pClientInfo->m_Skin0, 6, "beast");
-		StrToInts(&pClientInfo->m_Clan0, 3, "小黑");
-		break;
-	default:
-		break;
-	}
+	StrToInts(&pClientInfo->m_Skin0, 6, "twintri");
+	StrToInts(&pClientInfo->m_Clan0, 3, "调查员");
+	pClientInfo->m_ColorBody = 3276544;
+	pClientInfo->m_ColorFeet = 3276544;
 
 	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
 	if(!pPlayerInfo)
@@ -366,12 +326,6 @@ void CPlayer::HandleTuningParams()
 	}
 	
 	m_NextTuningParams = *GameServer()->Tuning();
-}
-
-void CPlayer::RandomChooseClass()
-{
-	int Class = (rand()%(NUM_PLAYERCLASS-1))+1;
-	m_Class = Class;
 }
 
 void CPlayer::EraseScrap(int ID)

@@ -769,7 +769,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
 
-				NewMonster(TYPE_PULLHANDLE);
+				NewMonster(TYPE_LEEK_BOX);
 			}
 			else
 			{
@@ -917,10 +917,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					{
 						if(str_comp(pReason, "1") == 0)
 						{
-							if(m_apPlayers[ClientID]->m_Class == 0)
-								ScrapInfo()->Call(m_apPlayers[ClientID]->m_vScraps[i]->m_ID, m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID, ClientID);
-							else
-								SendChatTarget(ClientID, _("怪物不能使用物品！"));
+							ScrapInfo()->Call(m_apPlayers[ClientID]->m_vScraps[i]->m_ID, m_apPlayers[ClientID]->m_vScraps[i]->m_ScrapID, ClientID);
 						}
 						else
 						{
@@ -982,9 +979,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					pPlayer->m_LastSetTeam = Server()->Tick();
 					if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
 						m_VoteUpdate = true;
-
-					if(pMsg->m_Team == TEAM_SPECTATORS)
-						pPlayer->m_Class = 1;
 
 					pPlayer->SetTeam(pMsg->m_Team);
 					(void)m_pController->CheckTeamBalance();

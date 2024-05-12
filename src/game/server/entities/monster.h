@@ -63,6 +63,7 @@ public:
 	void OnPredictedNinja();
     
     int GetLifes() { return m_Armor + m_Health; }
+	int m_DieTick;
 
 private:
 

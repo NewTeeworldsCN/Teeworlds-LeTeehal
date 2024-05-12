@@ -23,6 +23,7 @@ CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int 
     m_Health = 10 + Health;
 	m_MaxHealth = 10 + Health;
 	m_Difficulty = Difficulty;
+    m_DieTick = -1;
 
 	Spawn();
 
@@ -259,7 +260,7 @@ void CMonster::HandleCore()
 	bool Grounded = IsGrounded();
 
     CEntity *pVict;
-    if(m_Type == TYPE_LEEK_BOX)
+    if(m_Type == TYPE_SATIETY)
         pVict = GameWorld()->ClosestScrap(m_Pos, 10000, 0x0);
     else
         pVict = GameWorld()->ClosestCharacter(m_Pos, 10000, 0x0, false);
@@ -515,10 +516,23 @@ void CMonster::Tick()
 	HandleWeapons();
 	HandleCore();
 	Move();
+
+    if(m_DieTick > 0)
+    {
+        m_DieTick--;
+        if(m_DieTick == 0)
+            Reset();
+    }
 }
 
 void CMonster::HandleActions() // This is the monsters AI, it has been decreased because if too many calculations, it creates hard lags/crashes
 {
+    if(m_DieTick >= 0)
+    {
+        m_Core.m_Vel = vec2(0, 0); // this works like "Hey you are lose connection" hahahahhaha
+        m_WillJump = false;
+        return;
+    }
     if(m_Path.m_LastPos.x == m_Pos.x && m_Path.m_LastPos.y == m_Pos.y) // This is done because monsters are SOMETIMES stuck on a corner and can't move because of it
     {
         m_Path.m_StuckTick ++;
@@ -548,8 +562,24 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 	m_WillJump = false;
 
     CEntity *pVict;
-    if(m_Type == TYPE_LEEK_BOX)
+    if(m_Type == TYPE_SATIETY)
         pVict = GameWorld()->ClosestScrap(m_Pos, 10000, 0x0);
+    else if(m_Type == TYPE_LEEK_BOX)
+    {
+        pVict = GameServer()->m_World.ClosestCharacter(GetPos(), 240, 0x0, false);
+
+        if(pVict)
+        {
+            if(((CCharacter *)pVict)->m_LeekTick <= 0)
+            {
+                ((CCharacter *)pVict)->m_LeekTick = 15*Server()->TickSpeed();
+                int CID = ((CCharacter *)pVict)->GetPlayer()->GetCID();
+                GameServer()->SendChatTarget(CID, _("[生命维持系统]请回到飞船！你已被韭菜盒子锁定！请保护公司财产！"));
+                Die(15*Server()->TickSpeed());
+            }
+            return;
+        }
+    }
     else
         pVict = GameWorld()->ClosestCharacter(m_Pos, 10000, 0x0, false);
 
@@ -830,7 +860,7 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
         m_WillHook = false;
     }
 
-    if(pVict && m_Type == TYPE_LEEK_BOX)
+    if(pVict && m_Type == TYPE_SATIETY)
     {
         if(distance(pVict->m_Pos, m_Pos) < 32)
         {
@@ -888,9 +918,10 @@ bool CMonster::IncreaseArmor(int Amount)
 	return true;
 }
 
-void CMonster::Die(int Killer)
+void CMonster::Die(int DieTick)
 {
-    Reset();
+    if(m_DieTick < 0)
+        m_DieTick = DieTick;
 }
 
 const char *CMonster::MonsterName()
@@ -998,7 +1029,7 @@ bool CMonster::TakeDamage(vec2 Force, int Dmg, int From, int Weapon, bool FromMo
 				pChr->SetEmote(EMOTE_HAPPY, Server()->Tick() + Server()->TickSpeed());
 		}
 
-		Die(From);
+		Die(1);
 
 		return false;
 	}

@@ -114,9 +114,6 @@ public:
 
 	void HandleTuningParams();
 
-	int m_Class;
-	void RandomChooseClass();
-
 	int m_Hand;
 	void DropAllScrap(vec2 Pos, bool InShip);
 

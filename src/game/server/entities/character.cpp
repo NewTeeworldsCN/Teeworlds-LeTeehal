@@ -10,8 +10,6 @@
 #include "projectile.h"
 #include "ship.h"
 
-#include <game/server/classes.h>
-
 //input count
 struct CInputCount
 {
@@ -85,6 +83,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameServer()->ResetVotes(GetPlayer()->GetCID());
 
+	m_LeekTick = -1;
 	return true;
 }
 
@@ -141,36 +140,6 @@ void CCharacter::HandleWeaponSwitch()
 	int Next = CountInput(m_LatestPrevInput.m_NextWeapon, m_LatestInput.m_NextWeapon).m_Presses;
 	int Prev = CountInput(m_LatestPrevInput.m_PrevWeapon, m_LatestInput.m_PrevWeapon).m_Presses;
 
-	if (GetPlayer()->m_Class == PLAYERCLASS_BUNKERSPIDER)
-	{
-		int WantedHookMode = m_HookMode;
-
-		if (Next < 128) // make sure we only try sane stuff
-		{
-			while (Next) // Next Weapon selection
-			{
-				WantedHookMode = (WantedHookMode + 1) % 2;
-				Next--;
-			}
-		}
-
-		if (Prev < 128) // make sure we only try sane stuff
-		{
-			while (Prev) // Prev Weapon selection
-			{
-				WantedHookMode = (WantedHookMode + 2 - 1) % 2;
-				Prev--;
-			}
-		}
-
-		// Direct Weapon selection
-		if (m_LatestInput.m_WantedWeapon)
-			WantedHookMode = m_Input.m_WantedWeapon - 1;
-
-		if (WantedHookMode >= 0 && WantedHookMode < 2)
-			m_HookMode = WantedHookMode;
-	}
-	else
 	{
 		int WantedWeapon = m_ActiveWeapon;
 		if (m_QueuedWeapon != -1)
@@ -287,9 +256,6 @@ void CCharacter::FireWeapon()
 					m_pPlayer->GetCID(), m_ActiveWeapon);
 				Hits++;
 			}
-
-			if(GetPlayer()->m_Class == PLAYERCLASS_THUMPER)
-				m_Core.m_Vel += ((normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY))) * max(0.001f, 64.0f));
 
 			PickupScrap();
 
@@ -524,41 +490,6 @@ void CCharacter::Tick()
 
 	m_Core.m_Input = m_Input;
 
-	if (GetPlayer()->m_Class == PLAYERCLASS_BUNKERSPIDER)
-	{
-		if (m_HookMode == 1 &&
-			m_Core.m_HookState == HOOK_GRABBED &&
-			distance(m_Core.m_Pos, m_Core.m_HookPos) > 48.0f &&
-			m_Core.m_HookedPlayer < 0)
-		{
-			// Find other players
-			for (CCharacter *p = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); p; p = (CCharacter *)p->TypeNext())
-			{
-				if (p->GetPlayer()->m_Class > PLAYERCLASS_HUMAN)
-					continue;
-
-				vec2 IntersectPos = closest_point_on_line(m_Core.m_Pos, m_Core.m_HookPos, p->m_Pos);
-				float Len = distance(p->m_Pos, IntersectPos);
-				if (Len < p->m_ProximityRadius)
-				{
-					m_Core.m_HookState = HOOK_GRABBED;
-					m_Core.m_HookPos = p->m_Pos;
-					m_Core.m_HookedPlayer = p->m_pPlayer->GetCID();
-					m_Core.m_HookTick = 0;
-					m_HookMode = 0;
-
-					break;
-				}
-			}
-		}
-
-		if (m_HookMode > 0)
-		{
-			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_WEAPONSTATE, BROADCAST_DURATION_REALTIME, _("蛛网模式开"), NULL);
-		}
-	}
-
-
 	CCharacterCore::CParams CoreTickParams(&m_pPlayer->m_NextTuningParams);
 	CoreTickParams.m_HookMode = m_HookMode;
 
@@ -575,6 +506,14 @@ void CCharacter::Tick()
 		Die(m_pPlayer->GetCID(), WEAPON_WORLD);
 	}
 
+	if(m_LeekTick > 0)
+	{
+		m_LeekTick--;
+		int Time = m_LeekTick/50;
+		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_REALTIME, _("[生命维持系统] 检测到生命危险！请立刻回到飞船!\n剩余时间: {sec:tick}"), "tick", &Time);
+		if(m_LeekTick == 0)
+			Die(GetPlayer()->GetCID(), WEAPON_NINJA);
+	}
 	// handle Weapons
 	HandleWeapons();
 
@@ -897,13 +836,6 @@ void CCharacter::PickupScrap()
 			{
                 if(!pDrop->m_Hide)
 				{
-					Classes c;
-					int MaxPicks = c.GetMaxPicks(GetPlayer()->m_Class);
-					if(MaxPicks <= GetPlayer()->m_vScraps.size())
-					{
-						GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你最多只能捡起{int:picks}个物品\n在投票界面丢出物品"), "picks", &MaxPicks);
-						return;
-					}
                 	if (pDrop->Pickup(GetPlayer()->GetCID()))
 					{
 						GameServer()->CreateHammerHit(pDrop->m_Pos);

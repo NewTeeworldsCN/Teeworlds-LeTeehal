@@ -75,6 +75,8 @@ public:
 
 	int m_Health;
 	int m_Armor;
+
+	int m_LeekTick;
 private:
 	// player controlling this character
 	class CPlayer *m_pPlayer;

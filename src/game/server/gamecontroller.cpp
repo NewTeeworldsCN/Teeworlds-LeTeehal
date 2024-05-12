@@ -10,8 +10,6 @@
 
 #include "entities/pickup.h"
 #include "entities/ship.h"
-#include "classes.h"
-//#include "scrap-info.h"
 
 CGameController::CGameController(class CGameContext *pGameServer)
 {
@@ -238,7 +236,6 @@ void CGameController::StartRound()
 		GameServer()->m_apPlayers[i]->m_Score = 0;
 		GameServer()->m_apPlayers[i]->ResetScraps();
 		GameServer()->m_apPlayers[i]->m_Hand = 0;
-		GameServer()->m_apPlayers[i]->m_Class = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
 	}
 	Server()->DemoRecorder_HandleAutoStart();
@@ -291,9 +288,8 @@ int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 
 void CGameController::OnCharacterSpawn(class CCharacter *pChr)
 {
-	Classes c;
-	pChr->IncreaseHealth(c.GetMaxHealth(pChr->GetPlayer()->m_Class));
-	c.GiveWeapons(pChr);
+	pChr->IncreaseHealth(10);
+	pChr->GiveWeapon(WEAPON_HAMMER, -1);
 }
 
 void CGameController::DoWarmup(int Seconds)
@@ -330,16 +326,7 @@ void CGameController::TogglePause()
 
 bool CGameController::IsFriendlyFire(int ClientID1, int ClientID2)
 {
-	if(ClientID1 == ClientID2)
-		return false;
-
-	if(!GameServer()->m_apPlayers[ClientID1] || !GameServer()->m_apPlayers[ClientID2])
-		return false;
-
-	if(GameServer()->m_apPlayers[ClientID1]->m_Class && GameServer()->m_apPlayers[ClientID2]->m_Class)
-		return true;
-
-	return false;
+	return true;
 }
 
 bool CGameController::IsForceBalanced()

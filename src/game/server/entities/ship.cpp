@@ -53,6 +53,11 @@ void CShip::Tick()
                 GameServer()->ResetVotes(pChr->GetPlayer()->GetCID());
             }
             pChr->m_InShip = true;
+            if(pChr->m_LeekTick > 0)
+            {
+                pChr->m_LeekTick = -1;
+                GameServer()->SendChatTarget(pChr->GetPlayer()->GetCID(), _("[生命维持系统-飞船]已为您清除了韭菜盒子病毒，您现在安全了"));
+            }
         }
         else
         {
