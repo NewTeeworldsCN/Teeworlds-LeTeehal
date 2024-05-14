@@ -182,6 +182,9 @@ void CCharacter::FireWeapon()
 	if(m_ReloadTimer != 0)
 		return;
 
+	if(m_Freeze)
+		return;
+
 	DoWeaponSwitch();
 	vec2 Direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
 
@@ -496,16 +499,6 @@ void CCharacter::Tick()
 	vec2 PrevPos = m_Core.m_Pos;
 	m_Core.Tick(true, &CoreTickParams);
 
-	// handle death-tiles and leaving gamelayer
-	if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
-		GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
-		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
-		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
-		GameLayerClipped(m_Pos))
-	{
-		Die(m_pPlayer->GetCID(), WEAPON_WORLD);
-	}
-
 	if(m_LeekTick > 0)
 	{
 		m_LeekTick--;
@@ -517,6 +510,16 @@ void CCharacter::Tick()
 	// handle Weapons
 	HandleWeapons();
 
+	if(m_Freeze)
+	{
+		if(m_InShip)
+		{
+			GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("[生命维持系统-飞船]已为您修复生命维持系统"));
+			IncreaseHealth(3);
+			m_Freeze = false;
+		}
+		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("你的生命危在旦夕，叫你的队友来救你\n(把你钩回飞船上)"));
+	}
 	// Previnput
 	m_PrevInput = m_Input;
 	return;
@@ -640,35 +643,12 @@ bool CCharacter::IncreaseArmor(int Amount)
 
 void CCharacter::Die(int Killer, int Weapon)
 {
-	// we got to wait 0.5 secs before respawning
-	m_pPlayer->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
-	int ModeSpecial = GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[Killer], Weapon);
-
-	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "kill killer='%d:%s' victim='%d:%s' weapon=%d special=%d",
-		Killer, Server()->ClientName(Killer),
-		m_pPlayer->GetCID(), Server()->ClientName(m_pPlayer->GetCID()), Weapon, ModeSpecial);
-	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-
-	// send the kill message
-	CNetMsg_Sv_KillMsg Msg;
-	Msg.m_Killer = Killer;
-	Msg.m_Victim = m_pPlayer->GetCID();
-	Msg.m_Weapon = Weapon;
-	Msg.m_ModeSpecial = ModeSpecial;
-	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
-
 	// a nice sound
 	GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
 
-	// this is for auto respawn after 3 secs
-	m_pPlayer->m_DieTick = Server()->Tick();
-
-	m_Alive = false;
-	GameServer()->m_World.RemoveEntity(this);
-	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = 0;
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
 	m_pPlayer->DropAllScrap(m_Pos, m_InShip);
+	LCDie();
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
@@ -868,4 +848,18 @@ void CCharacter::UpdateTuningParam()
 		m_pPlayer->m_NextTuningParams.m_HookDragSpeed = 0.0f;
 		m_pPlayer->m_NextTuningParams.m_HookDragAccel = 1.0f;
 	}
+	if(m_Freeze)
+	{
+		m_pPlayer->m_NextTuningParams.m_GroundControlAccel = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_GroundJumpImpulse = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_AirJumpImpulse = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_AirControlAccel = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_HookLength = 0.0f;
+	}
+}
+
+void CCharacter::LCDie()
+{
+	m_Freeze = true;
+	GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("[生命维持系统]警告! 生命维持系统已损坏!"));
 }

@@ -84,6 +84,20 @@ public:
 	bool m_MapGenerated; // MapGen
 
 	virtual const char *NextMapName() = 0;
+
+	bool CountSec(int Sec)
+	{
+		if(Sec > 0)
+			return ((m_CurrentGameTick % (Sec * m_TickSpeed)) == 0);
+		return false;
+	}
+
+	bool CountTick(int Tick)
+	{
+		if(Tick > 0)
+			return ((m_CurrentGameTick % Tick) == 0);
+		return false;
+	}
 };
 
 class IGameServer : public IInterface

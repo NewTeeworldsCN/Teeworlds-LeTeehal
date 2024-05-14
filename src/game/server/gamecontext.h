@@ -266,6 +266,13 @@ public:
 	bool IsValidPlayer(int PlayerID);
 
 	void NewMonster(int Type);
+	void HandleMonsterSpawn();
+	int m_NeedSpawnTick[NUM_MONSTER_TYPES];
+
+	int m_CountInGame;
+	int m_CountAlive;
+
+	void Count();
 };
 
 inline int CmaskAll() { return -1; }

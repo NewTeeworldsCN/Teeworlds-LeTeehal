@@ -74,7 +74,6 @@ void CShip::Tick()
 
 void CShip::UpdateValue()
 {
-    m_Value = g_Config.m_GcValueShip;
     m_Num = 0;
     for (CScrap *pScrap = (CScrap *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pScrap; pScrap = (CScrap *)pScrap->TypeNext())
     {

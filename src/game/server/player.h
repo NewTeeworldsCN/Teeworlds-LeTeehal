@@ -118,6 +118,8 @@ public:
 	void DropAllScrap(vec2 Pos, bool InShip);
 
 	bool m_VoteStarted;
+	int m_AddedWeight;
+
 private:
 	CCharacter *m_pCharacter;
 	CGameContext *m_pGameServer;

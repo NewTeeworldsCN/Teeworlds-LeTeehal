@@ -14,6 +14,8 @@ enum
     TYPE_PULLHANDLE = 0,
 	TYPE_SATIETY,
 	TYPE_LEEK_BOX,
+	TYPE_BUG,
+	NUM_MONSTER_TYPES,
 	TYPE_FEAR,
 };
 
@@ -28,7 +30,7 @@ public:
 	//monster's size
 	static const int ms_PhysSize = 28;
 
-	CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor, int Difficulty);
+	CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor);
 
 	virtual void Reset();
 	virtual void Tick();
@@ -59,11 +61,12 @@ public:
 	void ChangeDir();
 	void Spawn();
 	const char *MonsterName();
-	int GetDifficulty() const { return m_Difficulty; }
 	void OnPredictedNinja();
     
     int GetLifes() { return m_Armor + m_Health; }
+	
 	int m_DieTick;
+	bool m_Freeze;
 
 private:
 
@@ -92,7 +95,6 @@ private:
 
 	int m_Type;
 	int m_MonsterID;
-	int m_Difficulty;
 
     bool m_WillFire;
     bool m_WillJump;

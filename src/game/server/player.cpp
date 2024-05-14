@@ -29,6 +29,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 
 	m_ItemCount = 0;
 	m_VoteStarted = false;
+
+	m_AddedWeight = 0;
 }
 
 CPlayer::~CPlayer()
@@ -102,6 +104,13 @@ void CPlayer::Tick()
  	}
 
 	HandleTuningParams();
+
+	if(Server()->CountSec(30) && m_AddedWeight)
+	{
+		m_AddedWeight = 0;
+		GameServer()->ResetVotes(GetCID());
+		GameServer()->SendChatTarget(GetCID(), _("[生命维持系统]清除了您身上的幽虫病毒"));
+	}
 }
 
 void CPlayer::PostTick()
@@ -140,6 +149,12 @@ void CPlayer::Snap(int SnappingClient)
 	StrToInts(&pClientInfo->m_Clan0, 3, "调查员");
 	pClientInfo->m_ColorBody = 3276544;
 	pClientInfo->m_ColorFeet = 3276544;
+	if(GetCharacter() && GetCharacter()->m_Freeze)
+	{
+		pClientInfo->m_ColorBody = 0;
+		pClientInfo->m_ColorFeet = 0;
+		StrToInts(&pClientInfo->m_Clan0, 3, "垂危");
+	}
 
 	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
 	if(!pPlayerInfo)

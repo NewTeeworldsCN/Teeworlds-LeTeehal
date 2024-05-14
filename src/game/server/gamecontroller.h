@@ -154,6 +154,9 @@ public:
 	array<vec2> m_aMonsterSpawnPos;
 	int m_MonsterSpawnNum;
 	int m_MonsterSpawnCurrentNum;
+
+	bool m_EndRound2;
+	int m_InShip[MAX_CLIENTS];
 };
 
 #endif

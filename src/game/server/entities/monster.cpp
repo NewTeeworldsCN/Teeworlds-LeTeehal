@@ -12,7 +12,7 @@
 #include "projectile.h"
 #include "monster.h"
 
-CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor, int Difficulty)
+CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor)
 : CEntity(pWorld, CGameWorld::ENTTYPE_MONSTER)
 {
     m_MonsterID = MonsterID;
@@ -22,8 +22,8 @@ CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int 
 	m_Armor = Armor;
     m_Health = 10 + Health;
 	m_MaxHealth = 10 + Health;
-	m_Difficulty = Difficulty;
     m_DieTick = -1;
+    m_Freeze = false;
 
 	Spawn();
 
@@ -31,6 +31,9 @@ CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int 
 
     for(int i = 0; i < ENTITY_NUM; i ++)
         m_aIDs[i] = Server()->SnapNewID();
+
+    if(Type == TYPE_SATIETY)
+        Die(60*Server()->TickSpeed());
 
 	GameWorld()->InsertEntity(this);
 }
@@ -80,11 +83,11 @@ void CMonster::Spawn()
 
     for(int i = 0; i < GameServer()->m_pController->m_aMonsterSpawnPos.size(); i ++)
     {
-        CMonster* pMonst = GameWorld()->ClosestMonster(GameServer()->m_pController->m_aMonsterSpawnPos[i], 100000, this);
+        CCharacter* pMonst = GameWorld()->ClosestCharacter(GameServer()->m_pController->m_aMonsterSpawnPos[i], 100000, this);
         if(pMonst)
         {
             float Distance2 = distance(GameServer()->m_pController->m_aMonsterSpawnPos[i], pMonst->m_Pos);
-            if(Distance < Distance2)
+            if(Distance > Distance2)
             {
                 Distance = Distance2;
                 FurthestNum = i;
@@ -114,14 +117,8 @@ void CMonster::Spawn()
             if(GameServer()->Collision()->CheckPoint(Pos))
                 continue;
 
-            CMonster* pClosest = GameWorld()->ClosestMonster(Pos, 100, this);
-            if(!pClosest)
-            {
-                Found = true;
-                SpawnPos = Pos;
-                break;
-            }
-            if(distance(pClosest->m_Pos, Pos) >= 32)
+            CCharacter* pClosest = GameWorld()->ClosestCharacter(Pos, 500, this);
+            if(pClosest)
             {
                 Found = true;
                 SpawnPos = Pos;
@@ -202,8 +199,6 @@ void CMonster::HandleNinja(bool IsPredicted)
 
                 int Damage = g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage;
 
-                Damage += (m_Difficulty - 1) * 3; // + 3 damage every 3 difficulty
-
 				aEnts[i]->TakeDamage(vec2(0, -10.0f), Damage, aEnts[i]->GetPlayer()->GetCID(), m_ActiveWeapon);
 			}
 
@@ -243,6 +238,10 @@ void CMonster::HandleNinja(bool IsPredicted)
 
 void CMonster::Move()
 {
+    if(m_Freeze)
+    {
+        m_Core.m_Vel = vec2(0,0);
+    }
 	float RampValue = VelocityRamp(length(m_Core.m_Vel)*50, GameServer()->m_World.m_Core.m_Tuning.m_VelrampStart, GameServer()->m_World.m_Core.m_Tuning.m_VelrampRange, GameServer()->m_World.m_Core.m_Tuning.m_VelrampCurvature);
 
 	m_Core.m_Vel.x = m_Core.m_Vel.x*RampValue;
@@ -527,12 +526,13 @@ void CMonster::Tick()
 
 void CMonster::HandleActions() // This is the monsters AI, it has been decreased because if too many calculations, it creates hard lags/crashes
 {
-    if(m_DieTick >= 0)
+    if(m_Freeze)
     {
         m_Core.m_Vel = vec2(0, 0); // this works like "Hey you are lose connection" hahahahhaha
         m_WillJump = false;
         return;
     }
+ 
     if(m_Path.m_LastPos.x == m_Pos.x && m_Path.m_LastPos.y == m_Pos.y) // This is done because monsters are SOMETIMES stuck on a corner and can't move because of it
     {
         m_Path.m_StuckTick ++;
@@ -570,12 +570,13 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 
         if(pVict)
         {
-            if(((CCharacter *)pVict)->m_LeekTick <= 0)
+            if(((CCharacter *)pVict)->m_LeekTick <= 0 && !((CCharacter *)pVict)->m_InShip)
             {
                 ((CCharacter *)pVict)->m_LeekTick = 15*Server()->TickSpeed();
                 int CID = ((CCharacter *)pVict)->GetPlayer()->GetCID();
-                GameServer()->SendChatTarget(CID, _("[生命维持系统]请回到飞船！你已被韭菜盒子锁定！请保护公司财产！"));
+                GameServer()->SendChatTarget(CID, _("[生命维持系统]请回到飞船！你已被感染韭菜盒子病毒！请保护公司财产！"));
                 Die(15*Server()->TickSpeed());
+                m_Freeze = true;
             }
             return;
         }
@@ -728,8 +729,16 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 
         if(distance(pVict->m_Pos, m_Pos) < 800)
         {
-            if(m_Difficulty >= 3 || m_Type == TYPE_PULLHANDLE)
+            if(m_Type == TYPE_PULLHANDLE || m_Type == TYPE_BUG)
+            {
+                Die(30*Server()->TickSpeed());
                 m_WillHook = true;
+                if(Server()->Tick()%25 == 0)
+                {
+                    ((CCharacter *)pVict)->GetPlayer()->m_AddedWeight++;
+                    GameServer()->ResetVotes(((CCharacter *)pVict)->GetPlayer()->GetCID());
+                }
+            }
             bool WillJump = CanJump();
             if(WillJump) // Here we check if when the monster will jump, it will still see the victim or not. If not, make like it doesn't jump
             {
@@ -931,6 +940,7 @@ const char *CMonster::MonsterName()
         case TYPE_PULLHANDLE: return "拉拉手"; break;
         case TYPE_SATIETY: return "吃饱饱"; break;
         case TYPE_LEEK_BOX: return "韭菜盒子"; break;
+        case TYPE_BUG: return "沉沉虫"; break;
         case TYPE_FEAR: return "害怕"; break;
     }
 }
@@ -1062,17 +1072,96 @@ void CMonster::Snap(int SnappingClient)
         pObj->m_StartTick = Server()->Tick();
     }
 
-    CNetObj_Pickup *apObjs[ENTITY_NUM];
-    for(int i = 0; i < ENTITY_NUM; i ++)
+    switch (m_Type)
     {
-        apObjs[i] = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aIDs[i], sizeof(CNetObj_Pickup)));
-        if(!apObjs[i])
-            return;
+    case TYPE_PULLHANDLE:
+        {
+            for(int i = 0; i < ENTITY_NUM; i ++)
+            {
+                CNetObj_Pickup *pObj = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aIDs[i], sizeof(CNetObj_Pickup)));
+                if(!pObj)
+                    return;
 
-        apObjs[i]->m_X = (int)m_aSnapPos[i].x;
-        apObjs[i]->m_Y = (int)m_aSnapPos[i].y;
-        apObjs[i]->m_Type = POWERUP_WEAPON;
-        apObjs[i]->m_Subtype = m_Type;
+                pObj->m_X = (int)m_aSnapPos[i].x;
+                pObj->m_Y = (int)m_aSnapPos[i].y;
+                pObj->m_Type = POWERUP_WEAPON;
+                pObj->m_Subtype = WEAPON_HAMMER;
+            }
+        }
+        break;
+    
+    case TYPE_SATIETY:
+        {
+            for(int i = 0; i < ENTITY_NUM; i ++)
+            {
+                CNetObj_Pickup *pObj = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aIDs[i], sizeof(CNetObj_Pickup)));
+                if(!pObj)
+                    return;
+
+                pObj->m_X = (int)m_aSnapPos[i].x;
+                pObj->m_Y = (int)m_aSnapPos[i].y;
+                pObj->m_Type = POWERUP_WEAPON;
+                pObj->m_Subtype = Server()->Tick()%25 == 0 ? rand()%NUM_WEAPONS : WEAPON_NINJA;
+            }
+        }
+        break;
+
+    case TYPE_LEEK_BOX:
+        {
+            for(int i = 0; i < ENTITY_NUM; i ++)
+            {
+                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
+                if(!pObj)
+                    return;
+
+                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
+                pObj->m_X = (int)m_aSnapPos[i].x;
+                pObj->m_Y = (int)m_aSnapPos[i].y;
+                pObj->m_FromX = (int)m_aSnapPos[Pos1].x;
+                pObj->m_FromY = (int)m_aSnapPos[Pos1].y;
+                pObj->m_StartTick = Server()->Tick() - m_DieTick + 1;
+            }
+        }
+        break;
+
+    case TYPE_BUG:
+        {
+            for(int i = 0; i < ENTITY_NUM; i ++)
+            {
+                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
+                if(!pObj)
+                    return;
+
+                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
+                pObj->m_X = (int)m_aSnapPos[i].x+12;
+                pObj->m_Y = (int)m_aSnapPos[i].y+12;
+                pObj->m_FromX = (int)m_aSnapPos[Pos1].x+12;
+                pObj->m_FromY = (int)m_aSnapPos[Pos1].y+12;
+                pObj->m_StartTick = Server()->Tick() - 10;
+            }
+        }
+        break;
+
+    case TYPE_FEAR:
+        {
+            for(int i = 0; i < ENTITY_NUM; i ++)
+            {
+                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
+                if(!pObj)
+                    return;
+
+                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
+                pObj->m_X = (int)m_aSnapPos[i].x + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
+                pObj->m_Y = (int)m_aSnapPos[i].y + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
+                pObj->m_FromX = (int)m_aSnapPos[Pos1].x + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
+                pObj->m_FromY = (int)m_aSnapPos[Pos1].y + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
+                pObj->m_StartTick = Server()->Tick() - m_DieTick + 1;
+            }
+        }
+        break;
+    
+    default:
+        break;
     }
 }
 

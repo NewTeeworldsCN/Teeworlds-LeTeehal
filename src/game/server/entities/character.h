@@ -77,6 +77,12 @@ public:
 	int m_Armor;
 
 	int m_LeekTick;
+	int m_CarriedBy;
+
+	bool m_Freeze;
+
+	void LCDie();
+
 private:
 	// player controlling this character
 	class CPlayer *m_pPlayer;

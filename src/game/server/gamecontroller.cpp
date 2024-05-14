@@ -41,6 +41,8 @@ CGameController::CGameController(class CGameContext *pGameServer)
 
 	m_MonsterSpawnNum = 0;
 	m_MonsterSpawnCurrentNum = 0;
+
+	m_EndRound2 = false;
 }
 
 CGameController::~CGameController()
@@ -129,7 +131,6 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	{
 	case ENTITY_SPAWN:
 		m_aaSpawnPoints[0][m_aNumSpawnPoints[0]++] = Pos;
-		m_aMonsterSpawnPos.add(Pos);
 		break;
 	
 	case ENTITY_SPAWN_RED:
@@ -187,7 +188,7 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 		break;
 
 	case ENTITY_MONSTER_SPAWN:
-		//m_aMonsterSpawnPos.add(Pos);
+		m_aMonsterSpawnPos.add(Pos);
 		break;
 	default:
 		break;
@@ -209,9 +210,11 @@ void CGameController::EndRound()
 	if(m_LaunchShip)
 		return;
 
+	dbg_msg("sdasda", "sdaa");
+
 	GameServer()->SendChatTarget(-1, _("[警告]为保证公司利益最大化，飞船已起飞"));
 	m_LaunchShip = true;
-	g_Config.m_GcMoney = g_Config.m_GcValueShip = m_pShip->GetValue();
+	g_Config.m_GcMoney += m_pShip->GetValue();
 }
 
 void CGameController::ResetGame()
@@ -226,7 +229,7 @@ void CGameController::StartRound()
 	ResetGame();
 
 	m_RoundStartTick = Server()->Tick();
-	m_GameOverTick = -1;
+	m_GameOverTick = Server()->Tick() + 10000;
 	GameServer()->m_World.m_Paused = false;
 	for (int i = 0; i < MAX_PLAYER; i++)
 	{
@@ -273,16 +276,7 @@ void CGameController::OnPlayerInfoChange(class CPlayer *pP)
 
 int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
-	// do scoreing
-	if(!pKiller || Weapon == WEAPON_GAME)
-		return 0;
-	if(pKiller == pVictim->GetPlayer())
-		pVictim->GetPlayer()->m_Score--; // suicide
-	else
-		pKiller->m_Score++; // normal kill
-
-	if(Weapon == WEAPON_SELF)
-		pVictim->GetPlayer()->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3.0f;
+	pVictim->GetPlayer()->SetTeam(TEAM_SPECTATORS);
 	return 0;
 }
 
@@ -348,11 +342,11 @@ bool CGameController::CanBeMovedOnBalance(int ClientID)
 void CGameController::Tick()
 {
 	if(!m_LaunchShip)
-		m_GameOverTick = Server()->Tick();
+		m_GameOverTick = Server()->Tick() + 1;
 	
 	if(Server()->m_LocateGame == LOCATE_LOBBY && m_LaunchShip)
 	{
-		m_GameOverTick = Server()->Tick();
+		m_GameOverTick = Server()->Tick() + 100;
 		if(Server()->m_MapGenerated)
 		{
 			m_ReloadTick = 100;
@@ -424,11 +418,49 @@ void CGameController::Tick()
 		return;
 	}
 
-	if(Server()->Tick() - m_GameOverTick >= 100 && m_LaunchShip && Server()->m_LocateGame == LOCATE_GAME)
+	if(Server()->m_LocateGame == LOCATE_GAME)
 	{
-		Server()->m_LocateGame = LOCATE_LOBBY;
-		str_copy(g_Config.m_SvMap, g_Config.m_SvMapLobby, sizeof(g_Config.m_SvMap));
-		GameServer()->Console()->ExecuteLine("reload", -1);
+		if(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart() && GameServer()->m_CountInGame > 0 && !m_LaunchShip)
+		{
+			m_GameOverTick = Server()->Tick() + 100;
+			EndRound();
+		}
+
+		if(Server()->Tick() - m_GameOverTick >= 0 && m_LaunchShip)
+		{
+			if(m_EndRound2)
+			{
+				Server()->m_LocateGame = LOCATE_LOBBY;
+				str_copy(g_Config.m_SvMap, g_Config.m_SvMapLobby, sizeof(g_Config.m_SvMap));
+				GameServer()->Console()->ExecuteLine("reload", -1);
+			}
+			else
+			{
+				m_EndRound2 = true;
+				m_GameOverTick = Server()->Tick() + 500;
+				GameServer()->SendChatTarget(-1, _("本轮已结束！"));
+				int Count = 0;
+				for (int i = 0; i < MAX_CLIENTS; i++)
+				{
+					if(!GameServer()->GetPlayerChar(i))
+						continue;
+	
+					if(!GameServer()->m_apPlayers[i]->GetCharacter()->m_InShip)
+					{
+						Count++;
+						GameServer()->SendChatTarget(-1, _("##{str:name} 被抛弃了!"), "name", Server()->ClientName(i));
+						GameServer()->m_apPlayers[i]->GetCharacter()->m_Freeze = true;
+					}
+				}
+				if(Count > 0)
+				{
+					int Sub = g_Config.m_GcMoney - (g_Config.m_GcMoney / clamp(Count, 1, g_Config.m_GcMoney));
+					GameServer()->SendChatTarget(-1, _("##扣除{int:money}元"), "money", &Sub);
+					g_Config.m_GcMoney -= Sub;
+				}
+				GameServer()->SendChatTarget(-1, _("$$你们将在数秒内回到飞船"));
+			}
+		}
 	}
 
 	if(m_PrepareTick > 0)

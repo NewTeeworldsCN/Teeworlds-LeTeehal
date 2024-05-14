@@ -1,3 +1,7 @@
+Teeworlds Lethal Company mod.
+=========
+
+
 Teeworlds
 =========
 
@@ -18,6 +22,9 @@ Please visit https://www.teeworlds.com/ for up-to-date information about
 the game, including new versions, custom maps and much more.
 
 Originally written by Magnus Auvinen.
+
+Base on Teeworlds-Mods2
+========
 
 tw06mod-localization branch
 ---------------------------

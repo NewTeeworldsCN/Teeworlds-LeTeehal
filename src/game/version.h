@@ -8,7 +8,7 @@
 #define GAME_RELEASE_VERSION "0.6.4"
 
 #define MOD_NAME "LeTeehal Company 致命公司"
-#define MOD_VERSION "0.1.0"
+#define MOD_VERSION "0.1.5"
 #define MOD_AUTHORS "Flower, ST-Chara"
 #define MOD_CREDITS "Flower, ST-Chara"
 #define MOD_THANKS "Kurosio, Necropotame, GutZuFusss, Bamcane"

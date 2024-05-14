@@ -99,7 +99,7 @@ enum
 
 enum
 {
-	LOCATE_LOBBY = 0,
+	LOCATE_LOBBY = 1,
 	LOCATE_GAME,
 };
 #endif

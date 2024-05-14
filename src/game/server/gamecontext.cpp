@@ -461,7 +461,7 @@ void CGameContext::OnTick()
 		}
 	}
 
-	if(Server()->Tick() % (Server()->TickSpeed()*90) == 0)
+	if(Server()->Tick() % (Server()->TickSpeed()*120) == 0)
 	{
 		SendChatTarget(-1, _("这是2024年第一届TMJ大赛的参赛作品之一"));
 		SendChatTarget(-1, _("加入QQ群893554667为本模式投票吧！"));
@@ -595,18 +595,9 @@ void CGameContext::OnTick()
 		}
 	}
 
-
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies)
-	{
-		for(int i = 0; i < g_Config.m_DbgDummies ; i++)
-		{
-			CNetObj_PlayerInput Input = {0};
-			Input.m_Direction = (i&1)?-1:1;
-			m_apPlayers[MAX_CLIENTS-i-1]->OnPredictedInput(&Input);
-		}
-	}
-#endif
+	Count();
+	if(Server()->m_LocateGame == LOCATE_GAME)
+		HandleMonsterSpawn();
 }
 
 // Server hooks
@@ -768,8 +759,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				Console()->ExecuteLineFlag(pMsg->m_pMessage + 1, ClientID, CFGFLAG_CHAT);
 				
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
-
-				NewMonster(TYPE_LEEK_BOX);
 			}
 			else
 			{
@@ -883,26 +872,27 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				
 				if(str_comp(aCmd, "qstart") == 0)
 				{
-					if(Server()->m_LocateGame == LOCATE_LOBBY)
-					{
-						if(m_apPlayers[ClientID]->m_VoteStarted)
-							SendChatTarget(ClientID, _("你取消了开始游戏的投票"));
-						else
-							SendChatTarget(ClientID, _("你发起了开始游戏的投票"));
-					}
-					else
-					{
-						if(m_apPlayers[ClientID]->m_VoteStarted)
-							SendChatTarget(ClientID, _("你取消了启动飞船的投票"));
-						else
-							SendChatTarget(ClientID, _("你发起了启动飞船的投票"));
-					}
+					int Need = GetNeedVoteStart();
 					// !false = true, !true = false. Toggle it.
 					m_apPlayers[ClientID]->m_VoteStarted = !m_apPlayers[ClientID]->m_VoteStarted;
+
 					// false = 0, 0 * 2 - 1 = -1; true = 1, 1 * 2 - 1 = 1;
 					// So, false = -1, true = 1(in here);
 					m_VoteStart += m_apPlayers[ClientID]->m_VoteStarted * 2 - 1;
-
+					if(Server()->m_LocateGame == LOCATE_LOBBY)
+					{
+						if(!m_apPlayers[ClientID]->m_VoteStarted)
+							SendChatTarget(ClientID, _("你取消了开始游戏的投票"));
+						else
+							SendChatTarget(ClientID, _("{str:name} 投票请求开始游戏[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
+					}
+					else
+					{
+						if(!m_apPlayers[ClientID]->m_VoteStarted)
+							SendChatTarget(ClientID, _("你取消了启动飞船的投票"));
+						else
+							SendChatTarget(ClientID, _("{str:name} 投票请求启动飞船[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
+					}
 					ResetVotes(-1);
 				}
 
@@ -1051,7 +1041,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				return;
 
 			pPlayer->m_LastKill = Server()->Tick();
-			pPlayer->KillCharacter(WEAPON_SELF);
+			SendBroadcast(ClientID, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_REALTIME, _("这个服务器禁止了自杀."));
 		}
 
 		ResetVotes(ClientID);
@@ -1696,6 +1686,7 @@ void CGameContext::ResetVotes(int ClientID)
 	CPlayer *pP = m_apPlayers[ClientID];
 	if(Server()->m_LocateGame == LOCATE_GAME)
 	{
+		int NeedStart = GetNeedVoteStart();
 		if(m_apPlayers[ClientID]->GetCharacter()->m_InShip)
 		{
 			AddVote(ClientID, "null", _("☪ 飞船"));
@@ -1710,8 +1701,13 @@ void CGameContext::ResetVotes(int ClientID)
 			AddVote(ClientID, "null", _("### 指标：{int:money}/{int:quota}"), "money", &Money, "quota", &Quota);
 			AddVote(ClientID, "null", _("### 飞船内物品数量: {int:num}"), "num", &Num);
 			AddVote(ClientID, "null", _("### 飞船内物品总价值: {int:value}"), "value", &Value);
-			int NeedStart = GetNeedVoteStart();
 			AddVote(ClientID, "qstart", _("☞ 起飞 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
+
+			pP->m_AddedWeight = 0;
+		}
+		else if(m_apPlayers[ClientID]->GetCharacter()->m_Freeze)
+		{
+			AddVote(ClientID, "qstart", _("☞ 提前启动飞船 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
 		}
 		else
 		{
@@ -1720,7 +1716,7 @@ void CGameContext::ResetVotes(int ClientID)
 			AddVote(ClientID, "null", _("投票理由为1尝试使用废品"));
 			AddVote(ClientID, "null", _("理由为空就放下废品"));
 		}
-		int Lb = 0;
+		int Lb = pP->m_AddedWeight;
 		int Value = 0;
 		for (int i = 0; i < pP->m_vScraps.size(); i++)
 		{
@@ -1915,8 +1911,40 @@ void CGameContext::NewMonster(int Type)
 	{
 	    if(!GetValidMonster(i))
 	    {
-	        m_apMonsters[i] = new CMonster(&m_World, Type, i, 1, 1, 0);
+	        m_apMonsters[i] = new CMonster(&m_World, Type, i, 1, 1);
 			break;
 	    }
+	}
+}
+
+void CGameContext::HandleMonsterSpawn()
+{
+	for (int i = 0; i < NUM_MONSTER_TYPES; i++)
+	{
+		if(m_NeedSpawnTick[i] > 0)
+			m_NeedSpawnTick[i]--;
+		else
+		{
+			NewMonster(i);
+			m_NeedSpawnTick[i] = Server()->TickSpeed()*(rand()%45 + 14 - min(m_CountAlive, 14));
+		}
+	}
+}
+
+void CGameContext::Count()
+{
+	m_CountAlive = 0;
+	m_CountInGame = 0;
+	for (int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!GetPlayerChar(i))
+			continue;
+
+		m_CountInGame++;
+
+		if(GetPlayerChar(i)->m_Freeze)
+			continue;
+		
+		m_CountAlive++;
 	}
 }
