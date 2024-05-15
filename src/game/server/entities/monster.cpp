@@ -1164,14 +1164,3 @@ void CMonster::Snap(int SnappingClient)
         break;
     }
 }
-
-void CGameContext::OnMonsterDeath(int MonsterID)
-{
-    if(!GetValidMonster(MonsterID))
-        return;
-
-    m_apMonsters[MonsterID]->Destroy();
-
-    delete m_apMonsters[MonsterID];
-    m_apMonsters[MonsterID] = 0;
-}

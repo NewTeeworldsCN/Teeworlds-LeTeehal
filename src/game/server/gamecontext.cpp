@@ -1909,7 +1909,7 @@ void CGameContext::NewMonster(int Type)
 {
 	for(int i = 0; i < MAX_MONSTERS; i ++)
 	{
-	    if(!GetValidMonster(i))
+	    if(!m_apMonsters[i])
 	    {
 	        m_apMonsters[i] = new CMonster(&m_World, Type, i, 1, 1);
 			break;
@@ -1947,4 +1947,15 @@ void CGameContext::Count()
 		
 		m_CountAlive++;
 	}
+}
+
+void CGameContext::OnMonsterDeath(int MonsterID)
+{
+    if(!GetValidMonster(MonsterID))
+        return;
+
+    m_apMonsters[MonsterID]->Destroy();
+
+    delete m_apMonsters[MonsterID];
+    m_apMonsters[MonsterID] = 0;
 }
