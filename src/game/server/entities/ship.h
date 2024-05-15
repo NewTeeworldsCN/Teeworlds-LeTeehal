@@ -24,12 +24,12 @@ public:
     int GetValue() { return m_Value; }
     int GetNum() { return m_Num; }
 
+    int m_Value;
 private:
     int m_IDs[NUM_ID];
     int m_IDsHammer[NUM_ID];
     int m_Radius;
     int m_StartTick;
-    int m_Value;
     int m_Num;
 };
 

@@ -97,7 +97,7 @@ bool CScrap::Pickup(int ClientID)
         return false;
 
     if(m_InShip)
-        g_Config.m_GcMoney -= m_ScrapValue;
+        GameServer()->m_pController->m_pShip->m_Value -= m_ScrapValue;
     
     Scrap *Temp = new Scrap();
     Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_ItemCount;
