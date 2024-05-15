@@ -1639,7 +1639,7 @@ void CGameContext::ResetVotes(int ClientID)
 		return;
 	}
 
-	CreateSound(m_apPlayers[ClientID]->GetCharacter()->m_Pos, SOUND_PICKUP_ARMOR);
+	CreateSoundGlobal(SOUND_PICKUP_ARMOR, ClientID);
 
 	CPlayer *pP = m_apPlayers[ClientID];
 	if(Server()->m_LocateGame == LOCATE_GAME)
