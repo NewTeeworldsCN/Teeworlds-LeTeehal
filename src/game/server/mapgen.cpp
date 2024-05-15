@@ -499,8 +499,6 @@ void CMapGen::WriteBackground(CGenLayer *pTiles)
 
 inline void CMapGen::ModifTile(ivec2 Pos, int Layer, int Tile, int Flags)
 {
-	if (Layer == m_pLayers->GetForegroundLayerIndex() && Tile != 0)
-		dbg_msg("dsadasd", "x:%d, y:%d Tile:%d", Pos.x, Pos.y, Tile);
 	m_pCollision->ModifTile(Pos, m_pLayers->GetGameGroupIndex(), Layer, Tile, Flags, 0);
 }
 
