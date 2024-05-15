@@ -1660,7 +1660,7 @@ void CGameContext::ResetVotes(int ClientID)
 			AddVote(ClientID, "null", _("### 飞船内物品数量: {int:num}"), "num", &Num);
 			AddVote(ClientID, "null", _("### 飞船内物品总价值: {int:value}"), "value", &Value);
 			AddVote(ClientID, "qstart", _("☞ 起飞 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
-			ivec2 PShip = ivec2(m_pController->m_pShip->m_Pos.x, m_pController->m_pShip->m_Pos.y);
+			ivec2 PShip = ivec2(m_pController->m_pShip->m_Pos.x/32, m_pController->m_pShip->m_Pos.y/32);
 			AddVote(ClientID, "null", _("飞船坐标:[x:{int:x}, y:{int:y}]"), "x", &PShip.x, "y", &PShip.y);
 			AddVote(ClientID, "qstart", _("###### 怪物 ######"));
 			AddVote(ClientID, "null", _("☞ 点我刷新"));
@@ -1672,7 +1672,7 @@ void CGameContext::ResetVotes(int ClientID)
 					c++;
 					char Name[64];
 					str_copy(Name, m_apMonsters[i]->MonsterName(), sizeof(Name));
-					ivec2 P = ivec2(m_apMonsters[i]->m_Pos.x, m_apMonsters[i]->m_Pos.y);
+					ivec2 P = ivec2(m_apMonsters[i]->m_Pos.x/32, m_apMonsters[i]->m_Pos.y/32);
 					AddVote(ClientID, "null", _("#{int:c}: {str:name} [x:{int:x} y:{int:y}]"), "c", &c, "name", Name, "x", &P.x, "y", &P.y);
 				}
 			}
