@@ -1662,7 +1662,7 @@ void CGameContext::ResetVotes(int ClientID)
 			AddVote(ClientID, "qstart", _("☞ 起飞 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
 			ivec2 PShip = ivec2(m_pController->m_pShip->m_Pos.x/32, m_pController->m_pShip->m_Pos.y/32);
 			AddVote(ClientID, "null", _("飞船坐标:[x:{int:x}, y:{int:y}]"), "x", &PShip.x, "y", &PShip.y);
-			AddVote(ClientID, "qstart", _("###### 怪物 ######"));
+			AddVote(ClientID, "null", _("###### 怪物 ######"));
 			AddVote(ClientID, "null", _("☞ 点我刷新"));
 			int c = 0;
 			for (int i = 0; i < MAX_MONSTERS; i++)
@@ -1677,7 +1677,7 @@ void CGameContext::ResetVotes(int ClientID)
 				}
 			}
 			
-			AddVote(ClientID, "qstart", _(""), "count", &m_VoteStart, "need", &NeedStart);
+			AddVote(ClientID, "null", _(""), "count", &m_VoteStart, "need", &NeedStart);
 
 			pP->m_AddedWeight = 0;
 		}

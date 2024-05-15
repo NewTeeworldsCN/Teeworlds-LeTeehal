@@ -61,8 +61,10 @@ void CMaze::Generate()
 	Connect(vec2(m_W * (x - 0.15f - s), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x - 0.1f), m_H * (0.5f - s * sy * 3)));
 	Connect(vec2(m_W * (x + 0.1f), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x + 0.15f + s), m_H * (0.5f - s * sy * 3)));
 
-	m_aRoom[m_Rooms++] = vec2(m_W*(0.5f-s*(frandom()-frandom())), m_H*(0.5f+s*sy*2));
-	m_aRoom[m_Rooms++] = vec2(m_W*(0.5f-s*(frandom()-frandom())), m_H*(0.5f-s*sy*2));
+	m_aRoom[m_Rooms++] = vec2(0, 0);
+	m_aRoom[m_Rooms++] = vec2(m_W, m_H);
+
+	Connect(m_aRoom[m_Rooms-1], m_aRoom[m_Rooms]);
 
 	// create random rooms
 	for (int i = 0; i < r; i++)
