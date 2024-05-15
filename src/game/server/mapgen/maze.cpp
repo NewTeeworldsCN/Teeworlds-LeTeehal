@@ -37,7 +37,7 @@ void CMaze::Generate()
 {
 	m_Rooms = 0;
 
-	int r = 24;
+	int r = 36;
 
 	float s = 0.15f + frandom();
 	float sy = 0.4f;
