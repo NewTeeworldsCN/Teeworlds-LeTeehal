@@ -884,14 +884,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						if(!m_apPlayers[ClientID]->m_VoteStarted)
 							SendChatTarget(ClientID, _("你取消了开始游戏的投票"));
 						else
-							SendChatTarget(ClientID, _("{str:name} 投票请求开始游戏[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
+							SendChatTarget(-1, _("{str:name} 投票请求开始游戏[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
 					}
 					else
 					{
 						if(!m_apPlayers[ClientID]->m_VoteStarted)
 							SendChatTarget(ClientID, _("你取消了启动飞船的投票"));
 						else
-							SendChatTarget(ClientID, _("{str:name} 投票请求启动飞船[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
+							SendChatTarget(-1, _("{str:name} 投票请求启动飞船[{int:now}/{int:need}]"), "name", Server()->ClientName(ClientID), "now", &m_VoteStart, "need", &Need);
 					}
 					ResetVotes(-1);
 				}
