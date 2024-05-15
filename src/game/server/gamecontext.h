@@ -249,7 +249,7 @@ public:
 	int m_VoteStart;
 	int GetNeedVoteStart()
 	{
-		return ((int)((m_VoteStart/3)*2)) + 1;
+		return ((int)((m_CountInGame/3)*2)) + 1;
 	}
 
 	// MapGen

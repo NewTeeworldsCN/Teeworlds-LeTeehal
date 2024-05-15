@@ -1,6 +1,7 @@
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
 #include <base/math.h>
+#include <engine/shared/config.h>
 
 #include "scrap.h"
 
@@ -94,6 +95,9 @@ bool CScrap::Pickup(int ClientID)
 {
     if(ClientID > MAX_CLIENTS || ClientID < 0 || !GameServer()->m_apPlayers[ClientID])
         return false;
+
+    if(m_InShip)
+        g_Config.m_GcMoney -= m_ScrapValue;
     
     Scrap *Temp = new Scrap();
     Temp->m_ID = GameServer()->m_apPlayers[ClientID]->m_ItemCount;

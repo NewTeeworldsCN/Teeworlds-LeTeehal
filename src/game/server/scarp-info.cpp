@@ -9,16 +9,16 @@ CScrapInfo::CScrapInfo(CGameContext *pGameServer)
 
 void CScrapInfo::Init()
 {
-    RegisterScrap("牙膏", SCRAP_L1_TOOTHPASTE, ivec2(7, 14), ivec2(0, 1), LCToothpaste);
-    RegisterScrap("梳子", SCRAP_L1_HAIRBRUSH, ivec2(8, 12), ivec2(6, 11), LCHairbrush);
-    RegisterScrap("闪光弹", SCRAP_L1_FLASHBANG, ivec2(20, 24), ivec2(4, 8), LCFlashbang);
+    RegisterScrap("牙膏", SCRAP_L1_TOOTHPASTE, ivec2(1, 7), ivec2(0, 1), LCToothpaste);
+    RegisterScrap("梳子", SCRAP_L1_HAIRBRUSH, ivec2(2, 6), ivec2(6, 11), LCHairbrush);
+    RegisterScrap("闪光弹", SCRAP_L1_FLASHBANG, ivec2(4, 8), ivec2(4, 8), LCFlashbang);
     RegisterScrap("酸黄瓜", SCRAP_L1_PICKLES, ivec2(9, 14), ivec2(6, 12), LCPickles);
-    RegisterScrap("塑料鱼", SCRAP_L1_FISH, ivec2(6, 15), ivec2(0, 1), LCFish);
-    RegisterScrap("金属板", SCRAP_L1_METALSHEET, ivec2(12, 14), ivec2(14, 20), LCMetalsheet);
+    RegisterScrap("塑料鱼", SCRAP_L1_FISH, ivec2(2, 7), ivec2(0, 1), LCFish);
+    RegisterScrap("金属板", SCRAP_L1_METALSHEET, ivec2(2, 9), ivec2(14, 20), LCMetalsheet);
 
-    RegisterScrap("机器人玩具", SCRAP_L2_TOY, ivec2(31, 31), ivec2(8, 16), LCToy);
+    RegisterScrap("机器人玩具", SCRAP_L2_TOY, ivec2(15, 20), ivec2(8, 16), LCToy);
     RegisterScrap("魔方", SCRAP_L2_CUBE, ivec2(2, 30), ivec2(2, 4), LCCube);
-    RegisterScrap("路牌", SCRAP_L2_SIGN, ivec2(17, 28), ivec2(28, 40), LCSign);  
+    RegisterScrap("路牌", SCRAP_L2_SIGN, ivec2(10, 28), ivec2(28, 40), LCSign);  
     RegisterScrap("药瓶", SCRAP_L2_PILL, ivec2(1, 30), ivec2(2, 4), LCPill);
     RegisterScrap("老式电话", SCRAP_L2_OLDPHONE, ivec2(19, 27), ivec2(14, 21), LCOldphone);
     RegisterScrap("遥控器", SCRAP_L2_REMOTE, ivec2(14, 24), ivec2(4, 11), LCRemote);

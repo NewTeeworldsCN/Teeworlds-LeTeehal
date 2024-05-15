@@ -918,6 +918,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						m_pController->m_pShip->UpdateValue();
 					}
 				}
+
+				ResetVotes(ClientID);
 				
 			}
 		}
@@ -939,50 +941,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if (MsgID == NETMSGTYPE_CL_SETTEAM && !m_World.m_Paused)
 		{
-			CNetMsg_Cl_SetTeam *pMsg = (CNetMsg_Cl_SetTeam *)pRawMsg;
-
-			if(pPlayer->GetTeam() == pMsg->m_Team || (g_Config.m_SvSpamprotection && pPlayer->m_LastSetTeam && pPlayer->m_LastSetTeam+Server()->TickSpeed()*3 > Server()->Tick()))
-				return;
-
-			if(pMsg->m_Team != TEAM_SPECTATORS && m_LockTeams)
-			{
-				pPlayer->m_LastSetTeam = Server()->Tick();
-				SendBroadcast(ClientID, BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, "Teams are locked");
-				return;
-			}
-
-			if(pPlayer->m_TeamChangeTick > Server()->Tick())
-			{
-				pPlayer->m_LastSetTeam = Server()->Tick();
-				int TimeLeft = (pPlayer->m_TeamChangeTick - Server()->Tick())/Server()->TickSpeed();
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Time to wait before changing team: %02d:%02d", TimeLeft/60, TimeLeft%60);
-				SendBroadcast(ClientID, BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, aBuf);
-				return;
-			}
-
-			// Switch team on given client and kill/respawn him
-			if(m_pController->CanJoinTeam(pMsg->m_Team, ClientID))
-			{
-				if(m_pController->CanChangeTeam(pPlayer, pMsg->m_Team))
-				{
-					pPlayer->m_LastSetTeam = Server()->Tick();
-					if(pPlayer->GetTeam() == TEAM_SPECTATORS || pMsg->m_Team == TEAM_SPECTATORS)
-						m_VoteUpdate = true;
-
-					pPlayer->SetTeam(pMsg->m_Team);
-					(void)m_pController->CheckTeamBalance();
-					pPlayer->m_TeamChangeTick = Server()->Tick();
-				}
-				else
-					SendBroadcast(ClientID, BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, "Teams must be balanced, please join other team");
-			}
-			else
-			{
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Only %d active players are allowed", Server()->MaxClients()-g_Config.m_SvSpectatorSlots);
-				SendBroadcast(ClientID, BROADCAST_PRIORITY_GAMEANNOUNCE, BROADCAST_DURATION_REALTIME, aBuf);
-			}
 		}
 		else if (MsgID == NETMSGTYPE_CL_SETSPECTATORMODE && !m_World.m_Paused)
 		{
@@ -1702,6 +1660,24 @@ void CGameContext::ResetVotes(int ClientID)
 			AddVote(ClientID, "null", _("### 飞船内物品数量: {int:num}"), "num", &Num);
 			AddVote(ClientID, "null", _("### 飞船内物品总价值: {int:value}"), "value", &Value);
 			AddVote(ClientID, "qstart", _("☞ 起飞 [{int:count}/{int:need}]"), "count", &m_VoteStart, "need", &NeedStart);
+			ivec2 PShip = ivec2(m_pController->m_pShip->m_Pos.x, m_pController->m_pShip->m_Pos.y);
+			AddVote(ClientID, "null", _("飞船坐标:[x:{int:x}, y:{int:y}]"), "x", &PShip.x, "y", &PShip.y);
+			AddVote(ClientID, "qstart", _("###### 怪物 ######"));
+			AddVote(ClientID, "null", _("☞ 点我刷新"));
+			int c = 0;
+			for (int i = 0; i < MAX_MONSTERS; i++)
+			{
+				if(m_apMonsters[i])
+				{
+					c++;
+					char Name[64];
+					str_copy(Name, m_apMonsters[i]->MonsterName(), sizeof(Name));
+					ivec2 P = ivec2(m_apMonsters[i]->m_Pos.x, m_apMonsters[i]->m_Pos.y);
+					AddVote(ClientID, "null", _("#{int:c}: {str:name} [x:{int:x} y:{int:y}]"), "c", &c, "name", Name, "x", &P.x, "y", &P.y);
+				}
+			}
+			
+			AddVote(ClientID, "qstart", _(""), "count", &m_VoteStart, "need", &NeedStart);
 
 			pP->m_AddedWeight = 0;
 		}
