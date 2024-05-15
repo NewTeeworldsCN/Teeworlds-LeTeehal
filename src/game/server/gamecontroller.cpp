@@ -210,8 +210,6 @@ void CGameController::EndRound()
 	if(m_LaunchShip)
 		return;
 
-	dbg_msg("sdasda", "sdaa");
-
 	GameServer()->SendChatTarget(-1, _("[警告]为保证公司利益最大化，飞船已起飞"));
 	m_LaunchShip = true;
 	g_Config.m_GcMoney += m_pShip->GetValue();
@@ -452,9 +450,9 @@ void CGameController::Tick()
 						GameServer()->m_apPlayers[i]->GetCharacter()->m_Freeze = true;
 					}
 				}
-				if(Count > 0)
+				if(Count > 0 && g_Config.m_GcMoney > 0)
 				{
-					int Sub = g_Config.m_GcMoney - (g_Config.m_GcMoney / clamp(Count, 1, g_Config.m_GcMoney));
+					int Sub = g_Config.m_GcMoney - (g_Config.m_GcMoney / clamp(Count, 1, g_Config.m_GcMoney + 1));
 					GameServer()->SendChatTarget(-1, _("##扣除{int:money}元"), "money", &Sub);
 					g_Config.m_GcMoney -= Sub;
 				}
