@@ -4,7 +4,7 @@
 #define ENGINE_SERVER_SERVER_H
 
 #include <engine/server.h>
-
+#include <engine/server/netsession.h>
 
 class CSnapIDPool
 {
@@ -127,6 +127,9 @@ public:
 		void Reset();
 
 		char m_aLanguage[16];
+		
+		bool m_Memory[NUM_CLIENTMEMORIES];
+		IServer::CClientSession m_Session;
 	};
 
 	CClient m_aClients[MAX_CLIENTS];
@@ -245,6 +248,16 @@ public:
 	virtual void SetClientLanguage(int ClientID, const char* pLanguage);
 
 	virtual const char *NextMapName();
+
+private:
+	CNetSession<IServer::CClientSession> m_NetSession;
+
+public:
+	virtual void SetClientMemory(int ClientID, int Memory, bool Value = true);
+	virtual void ResetClientMemoryAboutGame(int ClientID);
+	virtual bool GetClientMemory(int ClientID, int Memory);
+	
+	virtual IServer::CClientSession* GetClientSession(int ClientID);
 };
 
 #endif

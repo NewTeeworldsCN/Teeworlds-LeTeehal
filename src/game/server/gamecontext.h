@@ -24,6 +24,7 @@
 #include "mapgen.h"
 
 #include "entities/monster.h"
+
 /*
 	Tick
 		Game Context (CGameContext::tick)

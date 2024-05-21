@@ -711,6 +711,15 @@ int CServer::NewClientCallback(int ClientID, void *pUser)
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
 	pThis->m_aClients[ClientID].Reset();
+
+	//Getback session about the client
+	IServer::CClientSession* pSession = pThis->m_NetSession.GetData(pThis->m_NetServer.ClientAddr(ClientID));
+	if(pSession)
+	{
+		pThis->m_aClients[ClientID].m_Session = *pSession;
+		pThis->m_NetSession.RemoveSession(pThis->m_NetServer.ClientAddr(ClientID));
+	}
+
 	return 0;
 }
 
@@ -736,6 +745,9 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
+
+	//Keep information about client for 24 hours
+	pThis->m_NetSession.AddSession(pThis->m_NetServer.ClientAddr(ClientID), 60*60*24, &pThis->m_aClients[ClientID].m_Session);
 	return 0;
 }
 
@@ -1204,6 +1216,7 @@ void CServer::PumpNetwork()
 	}
 
 	m_ServerBan.Update();
+	m_NetSession.Update();
 	m_Econ.Update();
 }
 
@@ -1648,6 +1661,7 @@ void CServer::RegisterCommands()
 
 	// register console commands in sub parts
 	m_ServerBan.InitServerBan(Console(), Storage(), this);
+	m_NetSession.Init();
 	m_pGameServer->OnConsoleInit();
 }
 
@@ -1771,4 +1785,36 @@ int main(int argc, const char **argv) // ignore_convention
 const char *CServer::NextMapName()
 {
 	return g_Config.m_SvMap;
+}
+
+void CServer::SetClientMemory(int ClientID, int Memory, bool Value)
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || Memory < 0 || Memory >= NUM_CLIENTMEMORIES)
+		return;
+	
+	m_aClients[ClientID].m_Memory[Memory] = Value;
+}
+
+bool CServer::GetClientMemory(int ClientID, int Memory)
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || Memory < 0 || Memory >= NUM_CLIENTMEMORIES)
+		return false;
+	
+	return m_aClients[ClientID].m_Memory[Memory];
+}
+
+void CServer::ResetClientMemoryAboutGame(int ClientID)
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS)
+		return;
+	
+	m_aClients[ClientID].m_Memory[CLIENTMEMORY_TOP10] = false;
+}
+
+IServer::CClientSession* CServer::GetClientSession(int ClientID)
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS)
+		return 0;
+	
+	return &m_aClients[ClientID].m_Session;
 }

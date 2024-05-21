@@ -463,6 +463,7 @@ void CGameContext::OnTick()
 
 	if(Server()->Tick() % (Server()->TickSpeed()*120) == 0)
 	{
+		SendChatTarget(-1, _("=== 优秀员工 ==="));
 		SendChatTarget(-1, _("这是2024年第一届TMJ大赛的参赛作品之一"));
 		SendChatTarget(-1, _("加入QQ群893554667为本模式投票吧！"));
 	}
@@ -637,6 +638,9 @@ void CGameContext::OnClientConnected(int ClientID)
 	// Check which team the player should be on
 	const int StartTeam = g_Config.m_SvTournamentMode ? TEAM_SPECTATORS : m_pController->GetAutoTeam(ClientID);
 
+	if(m_apPlayers[ClientID])
+		return;
+
 	m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, StartTeam);
 
 	(void)m_pController->CheckTeamBalance();
@@ -661,6 +665,10 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 {
 	if(m_apPlayers[ClientID]->m_VoteStarted)
 		m_VoteStart--;
+	
+	if(GetPlayerChar(ClientID))
+		if(GetPlayerChar(ClientID)->m_LeekTick > 1)
+			Server()->GetClientSession(ClientID)->m_Freeze = true; // AntiCheat.
 
 	AbortVoteKickOnDisconnect(ClientID);
 	m_apPlayers[ClientID]->OnDisconnect(pReason);
@@ -911,6 +919,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						}
 						else
 						{
+							if(!m_apPlayers[ClientID]->m_vScraps[i]->m_InShip && m_apPlayers[ClientID]->GetCharacter()->m_InShip)
+							{
+								Server()->GetClientSession(ClientID)->m_TotalEarn += m_apPlayers[ClientID]->m_vScraps[i]->m_Value;
+								SendChatTarget(ClientID, _("你为公司贡献了{int:v}元"), "v", &m_apPlayers[ClientID]->m_vScraps[i]->m_Value);
+							}
 							new CScrap(&m_World, 0, m_apPlayers[ClientID]->GetCharacter()->m_Pos, false, m_apPlayers[ClientID]->GetCharacter()->m_InShip, *m_apPlayers[ClientID]->m_vScraps[i]);
 							m_apPlayers[ClientID]->EraseScrap(m_apPlayers[ClientID]->m_vScraps[i]->m_ID);
 						}
@@ -1702,7 +1715,6 @@ void CGameContext::ResetVotes(int ClientID)
 				Value += pP->m_vScraps[i]->m_Value;
 			}
 		}
-		pP->m_Score = Value;
 		pP->m_Weight = Lb;
 		AddVote(ClientID, "null", _("- - - - - - - - - - - -"));
 		AddVote(ClientID, "null", _("背包内物品##总重量:{int:lb}镑,总价值:{int:value}元"), "lb", &Lb, "value", &Value);

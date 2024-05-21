@@ -5,6 +5,16 @@
 #include "kernel.h"
 #include "message.h"
 
+enum
+{
+	CLIENTMEMORY_LANGUAGESELECTION=0,
+	CLIENTMEMORY_TOP10,
+	CLIENTMEMORY_MOTD,
+	CLIENTMEMORY_ROUNDSTART_OR_MAPCHANGE,
+	CLIENTMEMORY_SESSION_PROCESSED,
+	NUM_CLIENTMEMORIES,
+};
+
 class IServer : public IInterface
 {
 	MACRO_INTERFACE("server", 0)
@@ -28,6 +38,15 @@ public:
 	{
 		const char *m_pName;
 		int m_Latency;
+	};
+
+	struct CClientSession
+	{
+		int m_TotalEarn;
+		int m_RoundId;
+		float m_X;
+		float m_Y;
+		bool m_Freeze;
 	};
 
 	inline class CLocalization* Localization() { return m_pLocalization; }
@@ -98,6 +117,11 @@ public:
 			return ((m_CurrentGameTick % Tick) == 0);
 		return false;
 	}
+
+	virtual void SetClientMemory(int ClientID, int Memory, bool Value = true) = 0;
+	virtual void ResetClientMemoryAboutGame(int ClientID) = 0;
+	virtual bool GetClientMemory(int ClientID, int Memory) = 0;
+	virtual IServer::CClientSession* GetClientSession(int ClientID) = 0;
 };
 
 class IGameServer : public IInterface

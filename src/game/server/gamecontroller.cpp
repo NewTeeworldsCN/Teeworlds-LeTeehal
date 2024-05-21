@@ -126,6 +126,7 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	int Type = -1;
 	int SubType = 0;
 	Scrap Useless;
+	Useless.m_InShip = false;
 
 	switch (Index)
 	{
@@ -226,6 +227,7 @@ void CGameController::StartRound()
 {
 	ResetGame();
 
+	m_RoundId = rand();
 	m_RoundStartTick = Server()->Tick();
 	m_GameOverTick = Server()->Tick() + 10000;
 	GameServer()->m_World.m_Paused = false;
@@ -238,6 +240,8 @@ void CGameController::StartRound()
 		GameServer()->m_apPlayers[i]->ResetScraps();
 		GameServer()->m_apPlayers[i]->m_Hand = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
+
+		Server()->GetClientSession(i)->m_RoundId = m_RoundId;
 	}
 	Server()->DemoRecorder_HandleAutoStart();
 }
@@ -447,8 +451,9 @@ void CGameController::Tick()
 					{
 						Count++;
 						GameServer()->SendChatTarget(-1, _("##{str:name} 被抛弃了!"), "name", Server()->ClientName(i));
-						GameServer()->m_apPlayers[i]->GetCharacter()->m_Freeze = true;
 					}
+
+					Server()->GetClientSession(i)->m_Freeze = false;
 				}
 				if(Count > 0 && g_Config.m_GcMoney > 0)
 				{

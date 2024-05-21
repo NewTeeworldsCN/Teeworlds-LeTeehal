@@ -34,6 +34,7 @@ private:
     int m_Weight;
     bool m_Random;
     bool m_InShip;
+    bool m_WasInShip;
     float m_Angle;
 
     int m_IDs[NUM_ID];

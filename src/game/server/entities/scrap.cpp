@@ -27,6 +27,9 @@ CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, bool In
     m_Level = Level;
     m_Random = Random;
     m_InShip = InShip;
+    if(InShip)
+        S.m_InShip = true;
+
     switch (Level)
     {
     case ENTITY_SCRAP_L1:
@@ -52,6 +55,7 @@ CScrap::CScrap(CGameWorld *pGameWorld, int Level, vec2 Pos, bool Random, bool In
         m_ScrapType = S.m_ScrapID;
         m_ScrapValue = S.m_Value;
         m_Weight = S.m_Weight;
+        m_WasInShip = S.m_InShip;
     }
     m_Angle = rand() % 360;
     m_Vel = vec2(0, 0);
@@ -102,6 +106,7 @@ bool CScrap::Pickup(int ClientID)
     Temp->m_ScrapID = m_ScrapType;
     Temp->m_Value = m_ScrapValue;
     Temp->m_Weight = m_Weight;
+    Temp->m_InShip = m_WasInShip;
     GameServer()->m_apPlayers[ClientID]->m_vScraps.add(Temp);
     GameServer()->ResetVotes(ClientID);
     return true;

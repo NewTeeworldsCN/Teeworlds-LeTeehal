@@ -44,6 +44,8 @@ struct Scrap
     int m_ScrapID;
     int m_Value;
     int m_Weight;
+
+    bool m_InShip;
 };
 
 typedef void (*FCallbackScrap)(int ClientID, int ScrapID, void *pUser);

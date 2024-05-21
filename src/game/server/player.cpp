@@ -47,6 +47,8 @@ void CPlayer::Tick()
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
 
+	m_Score = Server()->GetClientSession(GetCID())->m_TotalEarn;
+
 	Server()->SetClientScore(m_ClientID, m_Score);
 	Server()->SetClientLanguage(m_ClientID, m_aLanguage);
 

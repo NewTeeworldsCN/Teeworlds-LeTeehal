@@ -157,6 +157,8 @@ public:
 
 	bool m_EndRound2;
 	int m_InShip[MAX_CLIENTS];
+
+	int m_RoundId;
 };
 
 #endif

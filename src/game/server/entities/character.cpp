@@ -64,6 +64,11 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_InShip = false;
 
 	m_pPlayer = pPlayer;
+	if(Server()->GetClientSession(GetPlayer()->GetCID())->m_RoundId == GameServer()->m_pController->m_RoundId && Server()->m_LocateGame == LOCATE_GAME)
+	{
+		Pos = vec2(Server()->GetClientSession(GetPlayer()->GetCID())->m_X, Server()->GetClientSession(GetPlayer()->GetCID())->m_Y);
+		m_Freeze = Server()->GetClientSession(GetPlayer()->GetCID())->m_Freeze;
+	}
 	m_Pos = Pos;
 
 	m_Core.Reset();
@@ -84,6 +89,8 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	GameServer()->ResetVotes(GetPlayer()->GetCID());
 
 	m_LeekTick = -1;
+
+	Server()->GetClientSession(GetPlayer()->GetCID())->m_RoundId = GameServer()->m_pController->m_RoundId;
 	return true;
 }
 
@@ -522,6 +529,10 @@ void CCharacter::Tick()
 	}
 	// Previnput
 	m_PrevInput = m_Input;
+
+	Server()->GetClientSession(GetPlayer()->GetCID())->m_X = m_Pos.x;
+	Server()->GetClientSession(GetPlayer()->GetCID())->m_Y = m_Pos.y;
+	Server()->GetClientSession(GetPlayer()->GetCID())->m_Freeze = m_Freeze;
 	return;
 }
 
