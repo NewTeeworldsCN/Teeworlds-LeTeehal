@@ -158,4 +158,6 @@ MACRO_CONFIG_INT(GcMoney, gc_money, 0, 0, 1000000000, CFGFLAG_SERVER, "")
 MACRO_CONFIG_INT(GcDays, gc_days, 3, 0, 1000000000, CFGFLAG_SERVER, "")
 MACRO_CONFIG_INT(GcRounds, gc_rounds, 1, 1, 1000000000, CFGFLAG_SERVER, "")
 
+MACRO_CONFIG_INT(SvServerInfoPerSecond, sv_server_info_per_second, 10, 1, 1000, CFGFLAG_SERVER, "Maximum number of complete server info responses that are sent out per second")
+
 #endif
