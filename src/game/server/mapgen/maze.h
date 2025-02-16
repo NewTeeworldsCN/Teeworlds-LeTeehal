@@ -28,6 +28,9 @@ private:
 	void Open(int x, int y);
 	
 	void Connect(vec2 Pos0, vec2 Pos1);
+
+	void EnsureAccessibility();
+	vec2 GetFurthestPoint(vec2 Origin) const;
 	
 public:
 	CMaze(int w, int h);

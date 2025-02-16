@@ -4,6 +4,8 @@
 
 #include <engine/shared/config.h>
 
+#include <queue>
+
 #include "room.h"
 #include "maze.h"
 
@@ -56,7 +58,7 @@ void CMaze::Generate()
 
 	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f + s * sy * 3)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * sy * 3)));
 
-	float x = 0.5f + (frandom()-frandom())*0.2f;
+	float x = 0.5f + (frandom() - frandom()) * 0.2f;
 
 	Connect(vec2(m_W * (x - 0.15f - s), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x - 0.1f), m_H * (0.5f - s * sy * 3)));
 	Connect(vec2(m_W * (x + 0.1f), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x + 0.15f + s), m_H * (0.5f - s * sy * 3)));
@@ -65,7 +67,9 @@ void CMaze::Generate()
 	for (int i = 0; i < r; i++)
 		GenerateRoom();
 
+	ConnectRooms();
 	ConnectEverything();
+	EnsureAccessibility();
 }
 
 void CMaze::GenerateLinear(int Width, int Rooms)
@@ -327,4 +331,83 @@ void CMaze::OpenRooms(CRoom *pRoom)
 		for (int y = 0; y < m_H; y++)
 			if (m_aOpen[x + y * m_W])
 				pRoom->Open(x, y);
+}
+
+// Flood
+void CMaze::EnsureAccessibility()
+{
+	bool *Visited = new bool[m_W * m_H]{false};
+	std::queue<ivec2> Queue;
+
+	for (int x = 0; x < m_W; x++)
+	{
+		for (int y = 0; y < m_H; y++)
+		{
+			if (m_aOpen[x + y * m_W])
+			{
+				Queue.push(ivec2(x, y));
+				Visited[x + y * m_W] = true;
+				x = m_W;
+				break;
+			}
+		}
+	}
+
+	while (!Queue.empty())
+	{
+		ivec2 Pos = Queue.front();
+		Queue.pop();
+
+		const ivec2 Dirs[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+		for (const auto &Dir : Dirs)
+		{
+			ivec2 NewPos = Pos + Dir;
+			if (NewPos.x >= 0 && NewPos.x < m_W &&
+				NewPos.y >= 0 && NewPos.y < m_H)
+			{
+				int Index = NewPos.x + NewPos.y * m_W;
+				if (m_aOpen[Index] && !Visited[Index])
+				{
+					Visited[Index] = true;
+					Queue.push(NewPos);
+				}
+			}
+		}
+	}
+
+	for (int x = 0; x < m_W; x++)
+	{
+		for (int y = 0; y < m_H; y++)
+		{
+			if (m_aOpen[x + y * m_W] && !Visited[x + y * m_W])
+			{
+				ivec2 Closest = GetClosestConnected(ivec2(x, y));
+				if (Closest.x != -1)
+				{
+					Connect(vec2(x, y), vec2(Closest.x, Closest.y));
+				}
+			}
+		}
+	}
+
+	delete[] Visited;
+}
+
+vec2 CMaze::GetFurthestPoint(vec2 Origin) const
+{
+    vec2 FurthestPoint = vec2(0, 0);
+    float MaxDistance = 0.0f;
+
+    for (int i = 0; i < m_Rooms; i++)
+    {
+        vec2 RoomPoint = m_aRoom[i];
+        float Dist = distance(RoomPoint, Origin);
+        if (Dist > MaxDistance)
+        {
+            MaxDistance = Dist;
+            FurthestPoint = RoomPoint;
+        }
+    }
+
+    return FurthestPoint;
 }

@@ -130,3 +130,43 @@ void CRoom::Fill(CGenLayer *pTiles, int Index, int x, int y, int w, int h)
 			pTiles->Set(Index, px, py);
 		}
 }
+
+int CRoom::GetMaxDepth() const
+{
+    int CurrentDepth = m_Y + m_H;
+    int ChildDepth = 0;
+    
+    if (m_pChild1)
+		ChildDepth = m_pChild1->GetMaxDepth();
+    if (m_pChild2)
+		ChildDepth = std::max(ChildDepth, m_pChild2->GetMaxDepth());
+    
+    return std::max(CurrentDepth, ChildDepth);
+}
+
+// 在 CRoom 类中添加以下方法
+vec2 CRoom::GetFurthestPoint() const
+{
+    // 当前房间的最远点（右下角）
+    vec2 current_furthest = vec2(m_X + m_W, m_Y + m_H);
+
+    // 递归检查子房间
+    vec2 child_furthest = current_furthest;
+    if (m_pChild1)
+    {
+        vec2 child1_furthest = m_pChild1->GetFurthestPoint();
+        if (distance(child1_furthest, vec2(0, 0)) > distance(child_furthest, vec2(0, 0)))
+            child_furthest = child1_furthest;
+    }
+    if (m_pChild2)
+    {
+        vec2 child2_furthest = m_pChild2->GetFurthestPoint();
+        if (distance(child2_furthest, vec2(0, 0)) > distance(child_furthest, vec2(0, 0)))
+            child_furthest = child2_furthest;
+    }
+
+    // 返回当前房间和子房间中最远的点
+    return distance(current_furthest, vec2(0, 0)) > distance(child_furthest, vec2(0, 0)) 
+           ? current_furthest 
+           : child_furthest;
+}

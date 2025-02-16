@@ -121,6 +121,32 @@ void CScrap::Snap(int SnappingClient)
     if (NetworkClipped(SnappingClient))
         return;
 
+    int Radius = clamp(m_Weight, 5, 50);
+    vec2 Vertices[4] = {
+        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
+        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
+        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4)),
+        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4))};
+    
+    if(GetInShip())
+    {
+        CScrap *pClosestScraps[16];
+        int Num = GameWorld()->FindEntities(m_Pos, (Radius * 2 + 4), (CEntity **)pClosestScraps, 16, CGameWorld::ENTTYPE_SCRAP);
+        for (int i = 0; i < Num; i++)
+        {
+            if (pClosestScraps[i] && pClosestScraps[i]->GetWeight() > GetWeight())
+            {
+                return;
+            }
+        }
+    }
+
+    if(!GameWorld()->m_Paused)
+        m_Angle += ((float)m_ScrapValue) / 64.f;
+
+    for (int i = 0; i < 4; i++)
+        Rotate(&Vertices[i], m_Pos.x, m_Pos.y, m_Angle);
+
     {
         CNetObj_Projectile *pProj = static_cast<CNetObj_Projectile *>(Server()->SnapNewItem(NETOBJTYPE_PROJECTILE, m_ID, sizeof(CNetObj_Projectile)));
         if (pProj)
@@ -132,21 +158,6 @@ void CScrap::Snap(int SnappingClient)
             pProj->m_Y = (int)m_Pos.y;
             pProj->m_StartTick = Server()->Tick();
         }
-    }
-
-    int Radius = clamp(m_Weight, 5, 50);
-    vec2 Vertices[4] = {
-        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
-        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y - (Radius * 2 + 4)),
-        vec2(m_Pos.x + (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4)),
-        vec2(m_Pos.x - (Radius * 2 + 4), m_Pos.y + (Radius * 2 + 4))};
-
-    if(!GameWorld()->m_Paused)
-        m_Angle += ((float)m_ScrapValue) / 64.f;
-
-    for (int i = 0; i < 4; i++)
-    {
-        Rotate(&Vertices[i], m_Pos.x, m_Pos.y, m_Angle);
     }
 
     for (int i = 0; i < NUM_ID; i++)

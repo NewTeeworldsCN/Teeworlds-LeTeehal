@@ -28,6 +28,9 @@ public:
 	void Generate(class CGenLayer *pTiles);
 	
 	void Fill(class CGenLayer *pTiles, int Index, int x, int y, int w, int h);
+
+	int GetMaxDepth() const;
+	vec2 GetFurthestPoint() const;
 };
 
 

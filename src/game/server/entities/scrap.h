@@ -21,10 +21,10 @@ public:
 
     bool Pickup(int ClientID);
     
-    int GetScrapValue() { return m_ScrapValue; }
-    int GetScrapType() { return m_ScrapType; }
-    int GetWeight() { return m_Weight; }
-    bool GetInShip() { return m_InShip; }
+    inline int GetScrapValue() { return m_ScrapValue; }
+    inline int GetScrapType() { return m_ScrapType; }
+    inline int GetWeight() { return m_Weight; }
+    inline bool GetInShip() { return m_InShip; }
     bool m_Hide;
 
 private:
