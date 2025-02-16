@@ -57,6 +57,15 @@ inline T distance(const vector2_base<T> a, const vector2_base<T> &b)
 }
 
 template<typename T>
+inline bool distancebox(const vector2_base<T> box, const vector2_base<T> a, const vector2_base<T> &b)
+{
+	vector2_base<T> dist(max(a.x, b.x) - min(a.x, b.x), max(a.y, b.y) - min(a.y, b.y));
+	if (dist.x < box.x && dist.y < box.y)
+		return true;
+	return false;
+}
+
+template<typename T>
 inline T dot(const vector2_base<T> a, const vector2_base<T> &b)
 {
 	return a.x*b.x + a.y*b.y;

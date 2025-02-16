@@ -44,7 +44,7 @@ void CShip::Tick()
         if (!pChr->GetPlayer())
             continue;
 
-        if (distance(pChr->m_Pos, m_Pos) <= m_Radius)
+        if (distancebox(vec2(m_Radius, m_Radius), pChr->m_Pos, m_Pos))
         {
             if (pChr->m_InShip == false)
             {
@@ -98,8 +98,8 @@ void CShip::Snap(int SnappingClient)
         return;
 
     vec2 Vertices[4] = {
-        vec2(m_Pos.x - m_Radius, m_Pos.y - m_Radius / 2),
-        vec2(m_Pos.x + m_Radius, m_Pos.y - m_Radius / 2),
+        vec2(m_Pos.x - m_Radius, m_Pos.y - m_Radius),
+        vec2(m_Pos.x + m_Radius, m_Pos.y - m_Radius),
         vec2(m_Pos.x + m_Radius, m_Pos.y + m_Radius),
         vec2(m_Pos.x - m_Radius, m_Pos.y + m_Radius)};
 
