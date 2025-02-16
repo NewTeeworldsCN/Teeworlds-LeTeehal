@@ -88,8 +88,7 @@ void CScrap::Tick()
     {
         int ClientID = TargetChr->GetPlayer()->GetCID();
 
-        GameServer()->SendBroadcast(ClientID, BROADCAST_PRIORITY_EFFECTSTATE, 10, 
-            _("废品:{str:Name}\n价值:{int:Value}\n重量:{int:Weight}\n使用锤子捡起物品"), 
+        GameServer()->SendBroadcast(ClientID, BROADCAST_PRIORITY_EFFECTSTATE, 10, _("废品:{str:Name}\n价值:{int:Value}\n重量:{int:Weight}\n使用锤子捡起物品"), 
             "Name", GameServer()->ScrapInfo()->GetScrapName(m_ScrapType), 
             "Value", &m_ScrapValue, "Weight", &m_Weight);
     }

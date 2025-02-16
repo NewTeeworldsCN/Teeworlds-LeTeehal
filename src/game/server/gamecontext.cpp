@@ -1444,7 +1444,7 @@ void CGameContext::ConLanguage(IConsole::IResult *pResult, void *pUserData)
 	if(aFinalLanguageCode[0])
 	{
 		pSelf->SetClientLanguage(ClientID, aFinalLanguageCode);
-		pSelf->SendChatTarget(ClientID, _("Language successfully switched to English"));
+		pSelf->SendChatTarget(ClientID, _("语言成功切换为中文"));
 	}
 	else
 	{
@@ -1686,7 +1686,7 @@ void CGameContext::ResetVotes(int ClientID)
 				}
 			}
 			
-			AddVote(ClientID, "null", _(""), "count", &m_VoteStart, "need", &NeedStart);
+			AddVote(ClientID, "null", _(" "), "count", &m_VoteStart, "need", &NeedStart);
 
 			pP->m_AddedWeight = 0;
 		}
