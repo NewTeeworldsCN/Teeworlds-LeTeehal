@@ -407,7 +407,7 @@ function(generate_source output_file script_parameter)
   )
 endfunction()
 
-file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/generated/")
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/game/generated/")
 if(GIT_FOUND)
   execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
     ERROR_QUIET
@@ -417,17 +417,17 @@ if(GIT_FOUND)
   )
 endif()
 
-chash("src/generated/nethash.cpp"
+chash("src/game/generated/nethash.cpp"
   "src/engine/shared/protocol.h"
-  "${PROJECT_BINARY_DIR}/src/generated/protocol.h"
+  "${PROJECT_BINARY_DIR}/src/game/generated/protocol.h"
   "src/game/tuning.h"
   "src/game/gamecore.cpp"
 )
 
-generate_source("src/generated/protocol.cpp" "network_source")
-generate_source("src/generated/protocol.h" "network_header")
-generate_source("src/generated/server_data.cpp" "server_content_source")
-generate_source("src/generated/server_data.h" "server_content_header")
+generate_source("src/game/generated/protocol.cpp" "network_source")
+generate_source("src/game/generated/protocol.h" "network_header")
+generate_source("src/game/generated/server_data.cpp" "server_content_source")
+generate_source("src/game/generated/server_data.h" "server_content_header")
 
 
 ########################################################################
@@ -441,12 +441,12 @@ file(GLOB ENGINE_INTERFACE "src/engine/*.cpp" "src/engine/*.h")
 
 file(GLOB ENGINE_SHARED "src/engine/shared/*.cpp" "src/engine/shared/*.h")
 
-set(ENGINE_GENERATED_SHARED src/generated/protocol.cpp src/generated/protocol.h)
+set(ENGINE_GENERATED_SHARED src/game/generated/protocol.cpp src/game/generated/protocol.h)
 file(GLOB GAME_SHARED "src/game/*.cpp" "src/game/*.h")
 
 set(GAME_GENERATED_SHARED
-  src/generated/nethash.cpp
-  src/generated/protocol.h
+  src/game/generated/nethash.cpp
+  src/game/generated/protocol.h
 )
 
 set(DEPS ${DEP_JSON} ${DEP_PNGLITE} ${ZLIB_DEP})
@@ -477,8 +477,8 @@ file(GLOB_RECURSE GAME_SERVER "src/game/server/*.cpp" "src/game/server/*.h")
 file(GLOB_RECURSE TEEUNIVERSES "src/teeuniverses/*.cpp" "src/teeuniverses/*.h")
 
 set(GAME_GENERATED_SERVER
-  "src/generated/server_data.cpp"
-  "src/generated/server_data.h"
+  "src/game/generated/server_data.cpp"
+  "src/game/generated/server_data.h"
 )
 
 set(SERVER_SRC ${ENGINE_SERVER} ${TEEUNIVERSES} ${GAME_SERVER} ${GAME_GENERATED_SERVER})
