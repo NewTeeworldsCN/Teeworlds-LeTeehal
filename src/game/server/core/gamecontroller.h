@@ -6,7 +6,8 @@
 #include <base/vmath.h>
 #include <vector>
 #include <base/tl/array.h>
-#include "entities/ship.h"
+#include "../entities/lc/ship.h"
+#include "../lc/expedition/expedition.h"
 
 /*
 	Class: Game Controller
@@ -67,6 +68,12 @@ public:
 	const char *m_pGameType;
 
 	bool IsGameOver() const { return m_GameOverTick != -1; }
+	int RoundStartTick() const { return m_RoundStartTick; }
+	ELcExpeditionPhase ExpeditionPhase() const { return m_ExpeditionPhase; }
+	int LastRoundShipValue() const { return m_LastRoundShipValue; }
+	int LastRoundPenalty() const { return m_LastRoundPenalty; }
+	int LastRoundEarnings() const { return m_LastRoundEarnings; }
+	int ExpeditionTimeBonusSec() const { return m_ExpeditionTimeBonusSec; }
 
 	CGameController(class CGameContext *pGameServer);
 	virtual ~CGameController();
@@ -133,6 +140,8 @@ public:
 
 	//
 	virtual bool CanSpawn(int Team, vec2 *pPos);
+	bool IsSpawnSafe(vec2 Pos) const;
+	bool GetSafeSpawnNear(vec2 Center, vec2 *pOut, float MaxRadius = 480.0f) const;
 
 	/*
 
@@ -146,16 +155,26 @@ public:
 
 	CShip *m_pShip;
 	int m_PrepareTick;
-	bool m_LaunchShip;
+	ELcExpeditionPhase m_ExpeditionPhase;
+	bool m_ReturnFinalized;
+
+	int m_LastRoundShipValue;
+	int m_LastRoundPenalty;
+	int m_LastRoundEarnings;
 
 	int m_ReloadTick;
+	bool m_FacilityMarkersBuilt;
 
 	array<vec2> m_aMonsterSpawnPos;
 	int m_MonsterSpawnNum;
 	int m_MonsterSpawnCurrentNum;
 
-	bool m_EndRound2;
-	int m_InShip[MAX_CLIENTS];
+	int m_LastLobbyBroadcastTick;
+	unsigned m_TimeWarningMask;
+	int m_LastBroadcastRemainingSec;
+	int m_ReturnDoorCloseSec;
+	int m_LastReturnDoorBroadcastSec;
+	int m_ExpeditionTimeBonusSec;
 
 	int m_RoundId;
 };

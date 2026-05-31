@@ -1,0 +1,21 @@
+sv_name "Lethal Company"
+sv_port 8303
+sv_max_clients 8
+sv_timelimit 5
+sv_map lc_main
+sv_map_lobby lc_main
+sv_map_game Factory
+sv_mapgen 1
+sv_mapgen_level 1
+sv_mapgen_seed 0
+sv_mapgen_random_seed 1
+sv_mapgen_theme metal_main
+sv_less_players_start 1
+gc_quota 280
+gc_money 0
+gc_days 4
+gc_rounds 1
+gc_moon 1
+
+# Career stats: leteehal_company_stats.txt in server working directory.
+sv_motd "Welcome. F3=terminal. ESC=vote. /help /status me"

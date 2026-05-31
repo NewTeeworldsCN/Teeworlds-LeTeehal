@@ -1,44 +1,24 @@
 {
     "translation": [
         {
-            "key": "",
-            "value": ""
+            "key": " ",
+            "value": " "
         },
         {
-            "key": "### 剩余天数: {int:days}",
-            "value": "### Deadline: {int:days}"
+            "key": "  └ {lstr:hint}",
+            "value": "  └ {lstr:hint}"
         },
         {
-            "key": "### 指标: {int:money}/{int:quota}",
-            "value": "### Quota: {int:money}/{int:quota}"
+            "key": "!!! 警告: 检测到高威胁目标 ({lstr:name}) !!!",
+            "value": "!!! 警告: 检测到高威胁目标 ({lstr:name}) !!!"
         },
         {
-            "key": "### 飞船内物品总价值: {int:value}",
-            "value": "### Total Value: {int:value}"
+            "key": "#{int:c} {lstr:name}·{lstr:desc} [{int:x},{int:y}]",
+            "value": "#{int:c} {lstr:name}·{lstr:desc} [{int:x},{int:y}]"
         },
         {
-            "key": "### 飞船内物品数量: {int:num}",
-            "value": "### Num Scrap: {int:num}"
-        },
-        {
-            "key": "###### 怪物 ######",
-            "value": "###### Monsters ######"
-        },
-        {
-            "key": "##{str:name} 被抛弃了!",
-            "value": "## {str:name} has been abandoned!"
-        },
-        {
-            "key": "##扣除{int:money}元",
-            "value": "## Deduct {int:money} yuan"
-        },
-        {
-            "key": "#{int:c}: {str:name} [x:{int:x} y:{int:y}]",
-            "value": "#{int:c}: {str:name} [x:{int:x} y:{int:y}]"
-        },
-        {
-            "key": "$$你们将在数秒内回到飞船",
-            "value": "$$You will return to the spaceship in a few seconds"
+            "key": "#{int:c}: {lstr:name}·{lstr:hint} [{int:x},{int:y}]",
+            "value": "#{int:c}: {lstr:name}·{lstr:hint} [{int:x},{int:y}]"
         },
         {
             "key": "- - - - - - -",
@@ -53,380 +33,3116 @@
             "value": "---------------"
         },
         {
-            "key": ".-=废品=-.",
-            "value": ".-= Scraps =-."
+            "key": "/help store|monsters|scrap 查看图鉴 | /status 任务状态",
+            "value": "/help store|monsters|scrap 查看图鉴 | /status 任务状态"
         },
         {
-            "key": "...不好(闪光瓶已损坏)",
-            "value": "...oh no(The flash bottle is damaged)"
+            "key": "=== 个人生涯 ===",
+            "value": "=== 个人生涯 ==="
+        },
+        {
+            "key": "F3=公司终端 | /help 1 分步教程",
+            "value": "F3=公司终端 | /help 1 分步教程"
+        },
+        {
+            "key": "{int:id} {lstr:name} | {lstr:desc}",
+            "value": "{int:id} {lstr:name} | {lstr:desc}"
+        },
+        {
+            "key": "{str:name}: {lstr:status}",
+            "value": "{str:name}: {lstr:status}"
+        },
+        {
+            "key": "{str:name}: 库存 {int:stock}",
+            "value": "{str:name}: 库存 {int:stock}"
+        },
+        {
+            "key": "⏎ 进入终端",
+            "value": "⏎ 进入终端"
+        },
+        {
+            "key": "☞ {int:id} {lstr:name} | {lstr:desc}",
+            "value": "☞ {int:id} {lstr:name} | {lstr:desc}"
+        },
+        {
+            "key": "☞ {lstr:name} | {lstr:desc}",
+            "value": "☞ {lstr:name} | {lstr:desc}"
+        },
+        {
+            "key": "☞ 分步教程",
+            "value": "☞ 分步教程"
+        },
+        {
+            "key": "☞ 泰坦 [★★★★★]",
+            "value": "☞ 泰坦 [★★★★★]"
+        },
+        {
+            "key": "☞ 队员状态",
+            "value": "☞ 队员状态"
+        },
+        {
+            "key": "【MVP·回收】{str:name} 上交 {int:v} 元",
+            "value": "【MVP·回收】{str:name} 上交 {int:v} 元"
+        },
+        {
+            "key": "【MVP·救援】{str:name} 救人 {int:n} 次",
+            "value": "【MVP·救援】{str:name} 救人 {int:n} 次"
+        },
+        {
+            "key": "【{int:id} {lstr:name}】",
+            "value": "【{int:id} {lstr:name}】"
+        },
+        {
+            "key": "【{lstr:name}】",
+            "value": "【{lstr:name}】"
+        },
+        {
+            "key": "【中途加入】你在着陆飞船附近复活",
+            "value": "【中途加入】你在着陆飞船附近复活"
+        },
+        {
+            "key": "【公司】头目 {lstr:name} 已被清除，公司奖励 {int:bonus} 元",
+            "value": "【公司】头目 {lstr:name} 已被清除，公司奖励 {int:bonus} 元"
+        },
+        {
+            "key": "【公司通知】本班次为头目轮次：{lstr:name}，设施内存在高威胁目标，请谨慎行动。",
+            "value": "【公司通知】本班次为头目轮次：{lstr:name}，设施内存在高威胁目标，请谨慎行动。"
+        },
+        {
+            "key": "【区域】进入 {str:zone}",
+            "value": "【区域】进入 {str:zone}"
+        },
+        {
+            "key": "【囤积虫】附近有囤积虫",
+            "value": "【囤积虫】附近有囤积虫"
+        },
+        {
+            "key": "【威胁接近】附近有怪物",
+            "value": "【威胁接近】附近有怪物"
+        },
+        {
+            "key": "【弹簧头】附近有弹簧头潜伏",
+            "value": "【弹簧头】附近有弹簧头潜伏"
+        },
+        {
+            "key": "【成就】{str:name} 达成「指标达标」",
+            "value": "【成就】{str:name} 达成「指标达标」"
+        },
+        {
+            "key": "【成就】{str:name} 达成「零抛弃返航」",
+            "value": "【成就】{str:name} 达成「零抛弃返航」"
+        },
+        {
+            "key": "【成就】{str:name} 达成「首次清除头目」",
+            "value": "【成就】{str:name} 达成「首次清除头目」"
+        },
+        {
+            "key": "【扫描】固定房间常有高价值废品，也更容易遭遇危险，请谨慎探索。",
+            "value": "【扫描】固定房间常有高价值废品，也更容易遭遇危险，请谨慎探索。"
+        },
+        {
+            "key": "【指标里程碑】已达 {int:pct}% | 还差 {int:need} 元",
+            "value": "【指标里程碑】已达 {int:pct}% | 还差 {int:need} 元"
+        },
+        {
+            "key": "【潜追者】高速怪物正在接近",
+            "value": "【潜追者】高速怪物正在接近"
+        },
+        {
+            "key": "【爆壳虫】爆炸型怪物接近",
+            "value": "【爆壳虫】爆炸型怪物接近"
+        },
+        {
+            "key": "【猛禽】远程怪物在附近",
+            "value": "【猛禽】远程怪物在附近"
+        },
+        {
+            "key": "【飞行器状态】",
+            "value": "【飞行器状态】"
+        },
+        {
+            "key": "主通道",
+            "value": "主通道"
+        },
+        {
+            "key": "会直线追最近玩家，在开阔地形尤其危险。",
+            "value": "会直线追最近玩家，在开阔地形尤其危险。"
+        },
+        {
+            "key": "公司余额 {int:money} 币 | 推荐组合约 {int:cost} 币",
+            "value": "公司余额 {int:money} 币 | 推荐组合约 {int:cost} 币"
+        },
+        {
+            "key": "周期图表 | 班次:%d 回收:%d | 指标进度:%d%%",
+            "value": "周期图表 | 班次:%d 回收:%d | 指标进度:%d%%"
+        },
+        {
+            "key": "商店购买次数 {int:n} | 全服商店总花费 {int:sp}",
+            "value": "商店购买次数 {int:n} | 全服商店总花费 {int:sp}"
+        },
+        {
+            "key": "地图生成中… 写入地图",
+            "value": "地图生成中… 写入地图"
+        },
+        {
+            "key": "地图生成中… 布局与房间",
+            "value": "地图生成中… 布局与房间"
+        },
+        {
+            "key": "地图生成失败（布局/连通性），请重试",
+            "value": "地图生成失败（布局/连通性），请重试"
+        },
+        {
+            "key": "地图生成排队中…",
+            "value": "地图生成排队中…"
+        },
+        {
+            "key": "地图生成进度… 阶段 {int:s}/3",
+            "value": "地图生成进度… 阶段 {int:s}/3"
+        },
+        {
+            "key": "对策：利用掩体与高低差；优先远程点杀。",
+            "value": "对策：利用掩体与高低差；优先远程点杀。"
+        },
+        {
+            "key": "推荐 {int:n} 人以上 | 难度 {int:stars} 星",
+            "value": "推荐 {int:n} 人以上 | 难度 {int:stars} 星"
+        },
+        {
+            "key": "本局: 上交 {int:dep} | 丢失 {int:lost} | 救人 {int:rev} | 死亡 {int:death}",
+            "value": "本局: 上交 {int:dep} | 丢失 {int:lost} | 救人 {int:rev} | 死亡 {int:death}"
+        },
+        {
+            "key": "本局地图种子: {int:seed}",
+            "value": "本局地图种子: {int:seed}"
+        },
+        {
+            "key": "泰坦",
+            "value": "泰坦"
+        },
+        {
+            "key": "深区",
+            "value": "深区"
+        },
+        {
+            "key": "潜追者",
+            "value": "潜追者"
+        },
+        {
+            "key": "班次剩余 {int:sec} 秒 | 路线 {lstr:moon}",
+            "value": "班次剩余 {int:sec} 秒 | 路线 {lstr:moon}"
+        },
+        {
+            "key": "着陆区",
+            "value": "着陆区"
+        },
+        {
+            "key": "累计上交 {int:dep} | 累计救人 {int:rev} | 累计死亡 {int:death} | 单局最高 {int:best}",
+            "value": "累计上交 {int:dep} | 累计救人 {int:rev} | 累计死亡 {int:death} | 单局最高 {int:best}"
+        },
+        {
+            "key": "血量较低，集火可快速清除。",
+            "value": "血量较低，集火可快速清除。"
+        },
+        {
+            "key": "高速地面追击，比猛禽更快但血量更低。",
+            "value": "高速地面追击，比猛禽更快但血量更低。"
+        },
+        {
+            "key": "高速地面追击；血量低但极难甩掉，优先远程击杀",
+            "value": "高速地面追击；血量低但极难甩掉，优先远程击杀"
+        },
+        {
+            "key": "高速追击·低血",
+            "value": "高速追击·低血"
+        },
+        {
+            "key": "### 截止：{int:days} 天",
+            "value": "### Deadline: {int:days} days"
+        },
+        {
+            "key": "### 指标：{int:money}/{int:quota}",
+            "value": "### Quota: {int:money}/{int:quota}"
+        },
+        {
+            "key": "### 班次剩余：{int:sec} 秒",
+            "value": "### Shift: {int:sec}s left"
+        },
+        {
+            "key": "### 船上价值：{int:value}",
+            "value": "### Ship value: {int:value}"
+        },
+        {
+            "key": "### 船上废品：{int:num} 件",
+            "value": "### Ship scrap: {int:num} items"
+        },
+        {
+            "key": "###### 个人背包 ######",
+            "value": "###### Inventory ######"
+        },
+        {
+            "key": "###### 公司商店 ######",
+            "value": "###### Store ######"
+        },
+        {
+            "key": "###### 威胁列表 ######",
+            "value": "###### Threats ######"
+        },
+        {
+            "key": "###### 选择路线 ######",
+            "value": "###### Select route ######"
+        },
+        {
+            "key": "###### 飞船库存 ######",
+            "value": "###### Ship cargo ######"
+        },
+        {
+            "key": "##{str:name} 被抛弃了!",
+            "value": "## {str:name} has been abandoned!"
+        },
+        {
+            "key": "##{str:name} 被抛弃了! 遗失废品价值 {int:value}元",
+            "value": "## {str:name} abandoned! Lost scrap worth {int:value}"
+        },
+        {
+            "key": "##因队员被抛弃，公司扣除 {int:money}元",
+            "value": "## Company fined {int:money} for abandoned crew"
+        },
+        {
+            "key": "#{int:c} {lstr:name} {int:value}元/{int:weight}镑",
+            "value": "#{int:c} {lstr:name} {int:value}/{int:weight} lb"
+        },
+        {
+            "key": "$$你们将在数秒内回到飞船",
+            "value": "$$Returning to ship in seconds"
+        },
+        {
+            "key": "--- 队友携带 ---",
+            "value": "--- Teammate load ---"
+        },
+        {
+            "key": "--- 队员状态 ---",
+            "value": "--- Team status ---"
+        },
+        {
+            "key": ".-=携带废品=-.",
+            "value": ".-= Carried scrap =-."
+        },
+        {
+            "key": ".-=船上废品=-.",
+            "value": ".-= Ship scrap =-."
+        },
+        {
+            "key": "/help store 商店 | /help monsters 怪物 | /help scrap 废品",
+            "value": "/help store | /help monsters | /help scrap"
+        },
+        {
+            "key": "1. ESC 投票 → 选路线 → 投票出发",
+            "value": "1. ESC vote → pick route → vote to launch"
+        },
+        {
+            "key": "2. F3 终端 → 商店购买 → 查看图鉴",
+            "value": "2. F3 terminal → buy gear → read guides"
+        },
+        {
+            "key": "2发散弹",
+            "value": "2 shotgun shells"
+        },
+        {
+            "key": "3. 设施内锤子拾取废品 → 回着陆飞船",
+            "value": "3. Hammer-pick scrap in facility → return to landing ship"
         },
         {
             "key": "=== 优秀员工 ===",
-            "value": "=== Excellent employees ==="
+            "value": "=== Top employees ==="
         },
         {
-            "key": "A1高闪来一个好吗！",
-            "value": "A1 high flash, how about it!"
+            "key": "=== 公司状态 ===",
+            "value": "=== Company status ==="
         },
         {
-            "key": "Credits: {str:c}",
-            "value": "Credits: {str:c}"
+            "key": "=== 公司终端 ===",
+            "value": "=== COMPANY TERMINAL MOTD ==="
         },
         {
-            "key": "Source: {str:c}",
-            "value": "Source: {str:c}"
+            "key": "=== 指标达成！合同续签 ===",
+            "value": "=== Quota met! Contract renewed ==="
         },
         {
-            "key": "Thanks to: {str:c}",
-            "value": "Thanks to: {str:c}"
+            "key": "=== 本轮结算 ===",
+            "value": "=== Round settlement ==="
+        },
+        {
+            "key": "=== 欢迎加入 Tee命公司 ===",
+            "value": "=== Welcome to Tee Company ==="
+        },
+        {
+            "key": "=== 被解雇 · 本周期战绩 ===",
+            "value": "=== Fired · cycle stats ==="
+        },
+        {
+            "key": "ESC/F3：理由1=使用 | 理由空=放下",
+            "value": "ESC/F3: reason 1=use | empty=drop"
+        },
+        {
+            "key": "ESC=投票 | 滚轮选 | 开火确认 | 钩索返回",
+            "value": "ESC=vote | scroll | fire=confirm | hook=back"
+        },
+        {
+            "key": "F3 终端可查看每种怪物的详细对策",
+            "value": "F3 terminal: detailed counter for each monster"
+        },
+        {
+            "key": "F3 终端可购买商店、查看图鉴",
+            "value": "F3 terminal: store and guides"
+        },
+        {
+            "key": "F3 终端图鉴可分页查看各商品详情",
+            "value": "F3 guide: paginated store item details"
+        },
+        {
+            "key": "F3 终端按 L1/L2/L3 分页查看各废品详情",
+            "value": "F3 guide: L1/L2/L3 scrap tiers"
+        },
+        {
+            "key": "L1 常见 8 种 | L2 稀有 8 种 | L3 高价值 8 种",
+            "value": "L1 common 8 | L2 rare 8 | L3 high-value 8"
+        },
+        {
+            "key": "L2 废品，价值高于 L1。",
+            "value": "L2 scrap, higher value than L1."
+        },
+        {
+            "key": "[公司] 班次剩余 {int:sec} 秒 — 请返回着陆飞船",
+            "value": "[COMPANY] {int:sec}s left — return to landing ship"
+        },
+        {
+            "key": "[公司] 班次结束 — 飞船即将起飞",
+            "value": "[Company] Shift ending — ship launching soon"
         },
         {
             "key": "[生命维持系统-飞船]已为您修复生命维持系统",
-            "value": "[Life Support System - Ship] We have repaired your life support system"
+            "value": "[Life support - ship] Suit repaired"
         },
         {
             "key": "[生命维持系统-飞船]已为您清除了韭菜盒子病毒，您现在安全了",
-            "value": "[Life Support System - Ship] The Leek Dumplings virus has been cleared for you. You are now safe"
+            "value": "[Life support - ship] Leek virus cleared"
         },
         {
-            "key": "[生命维持系统] 检测到生命危险！请立刻回到飞船!\\n剩余时间: {sec:tick}",
-            "value": "[生命维持系统] 检测到生命危险！请立刻回到飞船!\\n剩余时间: {sec:tick}"
+            "key": "[生命维持系统] 检测到生命危险！请立刻回到飞船!\n剩余时间: {sec:tick}",
+            "value": "[Life support] Danger! Return to ship now!\nTime left: {sec:tick}"
         },
         {
             "key": "[生命维持系统]清除了您身上的幽虫病毒",
-            "value": "[生命维持系统]清除了您身上的幽虫病毒"
+            "value": "[Life support] Ghost bug virus cleared"
         },
         {
             "key": "[生命维持系统]警告! 生命维持系统已损坏!",
-            "value": "[生命维持系统]警告! 生命维持系统已损坏!"
+            "value": "[Life support] WARNING: suit damaged!"
         },
         {
             "key": "[生命维持系统]请回到飞船！你已被感染韭菜盒子病毒！请保护公司财产！",
-            "value": "[生命维持系统]请回到飞船！你已被感染韭菜盒子病毒！请保护公司财产！"
+            "value": "[Life support] Return to ship! Leek virus! Protect company property!"
         },
         {
-            "key": "[警告]为保证公司利益最大化，飞船已起飞",
-            "value": "[警告]为保证公司利益最大化，飞船已起飞"
+            "key": "{lstr:name} [{int:cost} 币]",
+            "value": "{lstr:name} [{int:cost} cr]"
         },
         {
-            "key": "{str:name} {str:version} by {str:authors}",
+            "key": "{lstr:name} {int:min}分 {int:stars}星 废品{int:scrap}%",
+            "value": "{lstr:name} {int:min}m {int:stars}★ scrap {int:scrap}%"
+        },
+        {
+            "key": "{lstr:name} | {int:stars}星 | {int:min}分钟 | 废品{int:scrap}% | 怪物{int:mon}%",
+            "value": "{lstr:name} | {int:stars}★ | {int:min} min | scrap {int:scrap}% | monsters {int:mon}%"
+        },
+        {
+            "key": "{str:helper} 救活了 {str:name}",
+            "value": "{str:helper} revived {str:name}"
+        },
+        {
+            "key": "{str:name} {int:lb}镑/{int:value}元",
+            "value": "{str:name} {int:lb} lb/{int:value} cr"
+        },
+        {
+            "key": "{str:name} {str:version}，作者 {str:authors}",
             "value": "{str:name} {str:version} by {str:authors}"
         },
         {
+            "key": "{str:name} 使用了闪光弹！",
+            "value": "{str:name} used a flashbang!"
+        },
+        {
+            "key": "{str:name} 倒下，掉落了 {int:count} 件废品",
+            "value": "{str:name} fell and dropped {int:count} scrap item(s)"
+        },
+        {
             "key": "{str:name} 入职了公司",
-            "value": "{str:name} 入职了公司"
+            "value": "{str:name} joined the company"
         },
         {
             "key": "{str:name} 投票请求启动飞船[{int:now}/{int:need}]",
-            "value": "{str:name} 投票请求启动飞船[{int:now}/{int:need}]"
+            "value": "{str:name} voted to launch [{int:now}/{int:need}]"
         },
         {
             "key": "{str:name} 投票请求开始游戏[{int:now}/{int:need}]",
-            "value": "{str:name} 投票请求开始游戏[{int:now}/{int:need}]"
+            "value": "{str:name} voted to start [{int:now}/{int:need}]"
         },
         {
-            "key": "⊹ 废品:{str:name}, 价值{int:value}元, 重{int:weight}镑",
-            "value": "⊹ 废品:{str:name}, 价值{int:value}元, 重{int:weight}镑"
+            "key": "{str:name} 按下了遥控器... 远处传来两阵异响",
+            "value": "{str:name} pressed the remote… two distant noises"
         },
         {
-            "key": "☞ 开始游戏 [{int:count}/{int:need}]",
-            "value": "☞ 开始游戏 [{int:count}/{int:need}]"
+            "key": "{str:name} 的音响震彻全图！怪物们暂时动弹不得",
+            "value": "{str:name}'s boombox stuns all monsters!"
         },
         {
-            "key": "☞ 提前启动飞船 [{int:count}/{int:need}]",
-            "value": "☞ 提前启动飞船 [{int:count}/{int:need}]"
+            "key": "{str:name} 购买了 {lstr:item}（-{int:cost} 币）",
+            "value": "{str:name} bought {lstr:item} (-{int:cost} cr)"
         },
         {
-            "key": "☞ 点我刷新",
-            "value": "☞ 点我刷新"
+            "key": "{str:name} 选择了地图主题: {str:theme}",
+            "value": "{str:name} selected map theme: {str:theme}"
         },
         {
-            "key": "☞ 起飞 [{int:count}/{int:need}]",
-            "value": "☞ 起飞 [{int:count}/{int:need}]"
+            "key": "{str:name} 选择了路线: {lstr:moon}",
+            "value": "{str:name} selected {lstr:moon}"
+        },
+        {
+            "key": "{str:name}: {int:earn}元",
+            "value": "{str:name}: {int:earn}"
+        },
+        {
+            "key": "{str:name}: {int:lb}镑 / {int:value}元",
+            "value": "{str:name}: {int:lb} lb / {int:value} cr"
+        },
+        {
+            "key": "⊹ #{int:c} {lstr:name} {int:value}元/{int:weight}镑",
+            "value": "⊹ #{int:c} {lstr:name} {int:value}/{int:weight} lb"
+        },
+        {
+            "key": "⊹ {lstr:name} {int:value}元/{int:weight}镑",
+            "value": "⊹ {lstr:name} {int:value}/{int:weight} lb"
+        },
+        {
+            "key": "⏎ 返回",
+            "value": "⏎ Back"
+        },
+        {
+            "key": "⏎ 返回分类",
+            "value": "⏎ Back to category"
+        },
+        {
+            "key": "⏎ 返回分类列表",
+            "value": "⏎ Back to categories"
+        },
+        {
+            "key": "⏎ 返回商店目录",
+            "value": "⏎ Back to store"
+        },
+        {
+            "key": "⏎ 返回图鉴",
+            "value": "⏎ Back to guide"
+        },
+        {
+            "key": "⏎ 返回废品目录",
+            "value": "⏎ Back to scrap list"
+        },
+        {
+            "key": "⏎ 返回怪物列表",
+            "value": "⏎ Back to monster list"
+        },
+        {
+            "key": "⏎ 返回操作选择",
+            "value": "⏎ Back to actions"
+        },
+        {
+            "key": "⏎ 返回背包",
+            "value": "⏎ Back to backpack"
+        },
+        {
+            "key": "⏎ 返回背包列表",
+            "value": "⏎ Back to inventory"
+        },
+        {
+            "key": "① ESC/F3 → 选路线",
+            "value": "① ESC/F3 → pick route"
+        },
+        {
+            "key": "② 商店购买装备",
+            "value": "② Buy store gear"
+        },
+        {
+            "key": "③ 投票出发",
+            "value": "③ Vote to launch"
+        },
+        {
+            "key": "☆ 延长班次 + 驱虫哨",
+            "value": "☆ Extended shift + whistle"
+        },
+        {
+            "key": "☆ 延长班次（时间紧）",
+            "value": "☆ Extended shift (tight timer)"
+        },
+        {
+            "key": "☆ 扩音器 / 闪光弹（探路）",
+            "value": "☆ Megaphone / flashbang (scouting)"
+        },
+        {
+            "key": "☆ 蔓背怪多 → 扩音器扫描",
+            "value": "☆ Many bracken → megaphone scan"
+        },
+        {
+            "key": "☆ 防护服 / 生命保障（高危险）",
+            "value": "☆ Suit / life support (high hazard)"
+        },
+        {
+            "key": "☞ #{int:slot} {lstr:name} {int:value}元/{int:weight}镑",
+            "value": "☞ #{int:slot} {lstr:name} {int:value}/{int:weight} lb"
+        },
+        {
+            "key": "☞ L1 常见废品 (8种)",
+            "value": "☞ L1 common scrap (8)"
+        },
+        {
+            "key": "☞ L2 稀有废品 (8种)",
+            "value": "☞ L2 rare scrap (8)"
+        },
+        {
+            "key": "☞ L3 高价值废品 (8种)",
+            "value": "☞ L3 high-value scrap (8)"
+        },
+        {
+            "key": "☞ {lstr:name} [{int:cost}币] {lstr:desc}",
+            "value": "☞ {lstr:name} [{int:cost}cr] {lstr:desc}"
+        },
+        {
+            "key": "☞ 下趟武器",
+            "value": "☞ Next-shift weapons"
+        },
+        {
+            "key": "☞ 个人背包",
+            "value": "☞ Personal inventory"
+        },
+        {
+            "key": "☞ 使用 (理由1)",
+            "value": "☞ Use (reason 1)"
+        },
+        {
+            "key": "☞ 使用物品",
+            "value": "☞ Use item"
+        },
+        {
+            "key": "☞ 保障 [★★]",
+            "value": "☞ Assurance [★★]"
+        },
+        {
+            "key": "☞ 保障与班次",
+            "value": "☞ Assurance & shift"
+        },
+        {
+            "key": "☞ 公司商店",
+            "value": "☞ Store"
+        },
+        {
+            "key": "☞ 出发 [{int:count}/{int:need}]",
+            "value": "☞ Launch [{int:count}/{int:need}]"
+        },
+        {
+            "key": "☞ 刷新列表",
+            "value": "☞ Refresh list"
+        },
+        {
+            "key": "☞ 刷新威胁列表",
+            "value": "☞ Refresh threats"
+        },
+        {
+            "key": "☞ 启动飞船 [{int:count}/{int:need}]",
+            "value": "☞ LAUNCH [{int:count}/{int:need}]"
+        },
+        {
+            "key": "☞ 商店说明",
+            "value": "☞ STORE GUIDE"
+        },
+        {
+            "key": "☞ 图鉴",
+            "value": "☞ Guide"
+        },
+        {
+            "key": "☞ 威胁列表",
+            "value": "☞ Threats"
+        },
+        {
+            "key": "☞ 实地消耗品",
+            "value": "☞ Field consumables"
+        },
+        {
+            "key": "☞ 实验 [★]",
+            "value": "☞ Experimentation [★]"
+        },
+        {
+            "key": "☞ 废品说明",
+            "value": "☞ SCRAP GUIDE"
+        },
+        {
+            "key": "☞ 延长班次 +2分钟 [{int:cost} 币]",
+            "value": "☞ +2 min shift [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 忍者刀 [{int:cost} 币]",
+            "value": "☞ Ninja sword [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 急救包 [{int:cost} 币]",
+            "value": "☞ Medkit [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 怪物图鉴",
+            "value": "☞ BESTIARY"
+        },
+        {
+            "key": "☞ 手枪 {int:ammo}发 [{int:cost} 币]",
+            "value": "☞ Pistol {int:ammo} rnds [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 扩音器 [{int:cost} 币]",
+            "value": "☞ Megaphone [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 扫描",
+            "value": "☞ Scan"
+        },
+        {
+            "key": "☞ 扫描最近目标（或发点点表情）",
+            "value": "☞ Scan nearest target (or DOTDOT emote)"
+        },
+        {
+            "key": "☞ 攻势 [★★★★]",
+            "value": "☞ Offense [★★★★]"
+        },
+        {
+            "key": "☞ 放下 (理由空)",
+            "value": "☞ Drop (empty reason)"
+        },
+        {
+            "key": "☞ 放下物品",
+            "value": "☞ Drop item"
+        },
+        {
+            "key": "☞ 散弹枪 {int:ammo}发 [{int:cost} 币]",
+            "value": "☞ Shotgun {int:ammo} rnds [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 未知路线",
+            "value": "☞ Unknown route"
+        },
+        {
+            "key": "☞ 榴弹 {int:ammo}发 [{int:cost} 币]",
+            "value": "☞ Grenades {int:ammo} [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 激光枪 {int:ammo}发 [{int:cost} 币]",
+            "value": "☞ Rifle {int:ammo} rnds [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 生命保障 +{int:hp} [{int:cost} 币]",
+            "value": "☞ Life +{int:hp} [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 背包",
+            "value": "☞ Inventory"
+        },
+        {
+            "key": "☞ 能量汽水 [{int:cost} 币]",
+            "value": "☞ Energy soda [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 誓约 [★★★]",
+            "value": "☞ Vow [★★★]"
+        },
+        {
+            "key": "☞ 选择路线",
+            "value": "☞ Select route"
+        },
+        {
+            "key": "☞ 遥控器 [{int:cost} 币]",
+            "value": "☞ Remote [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 部署飞行器",
+            "value": "☞ Deploy aircraft"
+        },
+        {
+            "key": "☞ 闪光弹装备 [{int:cost} 币]",
+            "value": "☞ Flashbang [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 防护服 +3甲 [{int:cost} 币]",
+            "value": "☞ Hazard suit +3 armor [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 音响 [{int:cost} 币]",
+            "value": "☞ Boombox [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 飞船库存",
+            "value": "☞ Ship cargo"
+        },
+        {
+            "key": "☞ 飞行器 [{int:cost} 币]",
+            "value": "☞ Aircraft [{int:cost} cr]"
+        },
+        {
+            "key": "☞ 驱虫哨 [{int:cost} 币]",
+            "value": "☞ Whistle [{int:cost} cr]"
+        },
+        {
+            "key": "☪ 个人背包",
+            "value": "☪ Personal inventory"
+        },
+        {
+            "key": "☪ 公司商店",
+            "value": "☪ Company store"
+        },
+        {
+            "key": "☪ 公司飞行器",
+            "value": "☪ Company aircraft"
+        },
+        {
+            "key": "☪ 图鉴",
+            "value": "☪ Guide"
+        },
+        {
+            "key": "☪ 威胁列表",
+            "value": "☪ Threats"
         },
         {
             "key": "☪ 死人无法操作",
-            "value": "☪ 死人无法操作"
+            "value": "☪ Dead players cannot act"
         },
         {
-            "key": "☪ 游戏准备阶段",
-            "value": "☪ 游戏准备阶段"
+            "key": "☪ 着陆飞船",
+            "value": "☪ Landing ship"
         },
         {
             "key": "☪ 背包",
-            "value": "☪ 背包"
+            "value": "Backpack"
         },
         {
-            "key": "☪ 飞船",
-            "value": "☪ 飞船"
+            "key": "☪ 背包 ({int:slots}/{int:max})",
+            "value": "☪ Inventory ({int:slots}/{int:max})"
+        },
+        {
+            "key": "☪ 选择路线",
+            "value": "☪ Select route"
+        },
+        {
+            "key": "☪ 飞船库存",
+            "value": "☪ Ship cargo"
+        },
+        {
+            "key": "【#{int:slot} {lstr:name}】 {int:value}元 / {int:weight}镑",
+            "value": "【#{int:slot} {lstr:name}】 {int:value} / {int:weight} lb"
+        },
+        {
+            "key": "【L1 常见废品】滚轮选条目",
+            "value": "【L1 common scrap】scroll to select"
+        },
+        {
+            "key": "【L2 稀有废品】滚轮选条目",
+            "value": "【L2 rare scrap】scroll to select"
+        },
+        {
+            "key": "【L3 高价值废品】滚轮选条目",
+            "value": "【L3 high-value scrap】scroll to select"
+        },
+        {
+            "key": "【{lstr:name}】 {int:cost} 币",
+            "value": "【{lstr:name}】 {int:cost} cr"
+        },
+        {
+            "key": "【三步开始】",
+            "value": "[Get started]"
+        },
+        {
+            "key": "【下一步】",
+            "value": "[Next steps]"
+        },
+        {
+            "key": "【下一步】①选路线 ②商店 ③投票出发",
+            "value": "[Next] ①Route ②Store ③Launch"
+        },
+        {
+            "key": "【下趟武器】滚轮选条目",
+            "value": "【Next-shift weapons】scroll to select"
+        },
+        {
+            "key": "【保障与班次】滚轮选条目",
+            "value": "【Assurance & shift】scroll to select"
+        },
+        {
+            "key": "【公司】舱门将在 {int:sec} 秒后关闭 — 未登船将被抛弃",
+            "value": "[Company] Doors close in {int:sec}s — off-ship will be abandoned"
+        },
+        {
+            "key": "【公司商店说明】",
+            "value": "【Store guide】"
+        },
+        {
+            "key": "【公司终端】",
+            "value": "【Company terminal】"
+        },
+        {
+            "key": "【公司通知】指标已达成。合同续签，欢迎回来。",
+            "value": "[COMPANY] Quota met. Contract renewed."
+        },
+        {
+            "key": "【公司通知】指标未达成。",
+            "value": "[COMPANY] Quota not met."
+        },
+        {
+            "key": "【公司飞船终端】",
+            "value": "【Company ship terminal】"
+        },
+        {
+            "key": "【商店说明】选分类查看详情",
+            "value": "【Store guide】pick a category"
+        },
+        {
+            "key": "【威胁接近】附近有怪物（约 {int:m} 格）",
+            "value": "[Threat] Monster nearby (~{int:m} tiles)"
+        },
+        {
+            "key": "【实地消耗品】滚轮选条目",
+            "value": "【Field consumables】scroll to select"
+        },
+        {
+            "key": "【导航】着陆飞船在你{lstr:dir}边（约 {int:m} 格）",
+            "value": "[NAV] Landing ship to your {lstr:dir} (~{int:m} tiles)"
+        },
+        {
+            "key": "【导航】着陆飞船在你{lstr:dir}边（约 {int:m} 格）| 班次剩余 {int:sec} 秒 | {lstr:advice}",
+            "value": "[Nav] Ship {lstr:dir} (~{int:m} tiles) | {int:sec}s left | {lstr:advice}"
+        },
+        {
+            "key": "【废品说明】",
+            "value": "【Scrap guide】"
+        },
+        {
+            "key": "【废品说明】选等级分类",
+            "value": "【Scrap guide】pick tier"
+        },
+        {
+            "key": "【怪物图鉴】",
+            "value": "【Bestiary】"
+        },
+        {
+            "key": "【怪物图鉴】滚轮选条目看详情",
+            "value": "【Bestiary】scroll for details"
+        },
+        {
+            "key": "【教程 1/4】大厅：ESC 投票选路线，全员投票出发",
+            "value": "[Tutorial 1/4] Lobby: ESC vote route, all vote launch"
+        },
+        {
+            "key": "【教程 2/4】设施内：锤子拾取废品，4 格背包",
+            "value": "[Tutorial 2/4] Facility: hammer pickup, 4 slots"
+        },
+        {
+            "key": "【教程 3/4】ESC/F3：理由 1=使用物品，理由空=放下/放入飞船",
+            "value": "[Tutorial 3/4] ESC/F3: reason 1=use, empty=drop/deposit"
+        },
+        {
+            "key": "【教程 4/4】全员登船后投票启动飞船返航",
+            "value": "[Tutorial 4/4] All aboard, vote to launch back"
+        },
+        {
+            "key": "【本局推荐】",
+            "value": "[Recommended buys]"
+        },
+        {
+            "key": "【毒气】吸入有害气体！",
+            "value": "[GAS] Toxic fumes — take cover!"
+        },
+        {
+            "key": "【漏电】触碰到带电地面！",
+            "value": "[SHOCK] Electric floor — step back!"
+        },
+        {
+            "key": "【班次】剩余 {int:sec} 秒",
+            "value": "[Shift] {int:sec}s left"
+        },
+        {
+            "key": "【班次】剩余 {int:sec} 秒 — 请返回飞船！",
+            "value": "[Shift] {int:sec}s left — return to ship!"
+        },
+        {
+            "key": "【致命公司 · 快速指南】",
+            "value": "[Lethal Company · quick guide]"
+        },
+        {
+            "key": "【舱门关闭】{int:sec} 秒",
+            "value": "[Doors closing] {int:sec}s"
+        },
+        {
+            "key": "【警告】你踏入了黏性焦油！",
+            "value": "[Warning] You stepped into tar!"
+        },
+        {
+            "key": "【警告】你进入了地雷区域！",
+            "value": "[Warning] You entered a minefield!"
+        },
+        {
+            "key": "【警告】你进入了毒气区域！",
+            "value": "[Warning] You entered a gas zone!"
+        },
+        {
+            "key": "【警告】你进入了漏电区域！",
+            "value": "[Warning] You entered a shock zone!"
+        },
+        {
+            "key": "【队友携带】",
+            "value": "[Teammate load]"
+        },
+        {
+            "key": "【队员状态】",
+            "value": "[Team status]"
+        },
+        {
+            "key": "一副假牙，咬合力惊人。",
+            "value": "A set of dentures with a vicious bite."
+        },
+        {
+            "key": "一把旧发刷，使用后直接消耗。",
+            "value": "An old hairbrush; consumed on use."
+        },
+        {
+            "key": "一罐可疑泡菜，气味能熏退队友。",
+            "value": "Suspicious pickles; the smell wards off teammates."
+        },
+        {
+            "key": "上局种子：{int:seed}",
+            "value": "Last seed: {int:seed}"
+        },
+        {
+            "key": "上局结算 | 回收:{int:ship} 罚金:{int:penalty}",
+            "value": "Last round | recovered:{int:ship} penalty:{int:penalty}"
+        },
+        {
+            "key": "下一档指标: {int:quota} 元",
+            "value": "Next quota: {int:quota} cr"
+        },
+        {
+            "key": "下件双倍",
+            "value": "Next pickup doubled"
+        },
+        {
+            "key": "下趟+2分钟",
+            "value": "+2 min next shift"
+        },
+        {
+            "key": "下趟+3甲",
+            "value": "+3 armor next shift"
+        },
+        {
+            "key": "下趟+4血",
+            "value": "+4 HP next shift"
+        },
+        {
+            "key": "下趟全员出发时额外获得 3 点护甲。",
+            "value": "+3 armor for everyone on next departure."
+        },
+        {
+            "key": "下趟全员出发时额外获得 4 点生命值。",
+            "value": "+4 HP for everyone on next departure."
+        },
+        {
+            "key": "下趟全队班次 +2 分钟",
+            "value": "+2 minutes to next shift for the whole crew"
+        },
+        {
+            "key": "下趟出发时 +3 护甲",
+            "value": "+3 armor on next departure"
+        },
+        {
+            "key": "下趟出发时 +4 生命值",
+            "value": "+4 HP on next departure"
+        },
+        {
+            "key": "下趟出发时配发「停车标志」闪光弹。",
+            "value": "Stop-sign flashbang issued on next departure."
+        },
+        {
+            "key": "下趟增加 1 架飞行器库存（可多次购买叠加）。",
+            "value": "+1 aircraft stock next shift (stackable)."
+        },
+        {
+            "key": "下趟忍者刀",
+            "value": "Ninja sword next shift"
+        },
+        {
+            "key": "下趟手枪",
+            "value": "Pistol next shift"
+        },
+        {
+            "key": "下趟散弹枪",
+            "value": "Shotgun next shift"
+        },
+        {
+            "key": "下趟榴弹",
+            "value": "Grenade launcher next shift"
+        },
+        {
+            "key": "下趟武器 | 散弹/激光/榴弹/手枪/忍者刀",
+            "value": "Next-shift: shotgun/rifle/GL/pistol/ninja"
+        },
+        {
+            "key": "下趟激光枪",
+            "value": "Rifle next shift"
+        },
+        {
+            "key": "下趟配发忍者刀。",
+            "value": "Ninja sword issued next shift."
+        },
+        {
+            "key": "下趟配发忍者刀，可冲刺攻击",
+            "value": "Ninja sword next shift; dash attack"
+        },
+        {
+            "key": "下趟配发急救包。",
+            "value": "Medkit issued next shift."
+        },
+        {
+            "key": "下趟配发手枪与弹药",
+            "value": "Pistol and ammo next shift"
+        },
+        {
+            "key": "下趟配发手枪及弹药。",
+            "value": "Pistol and ammo issued next shift."
+        },
+        {
+            "key": "下趟配发扩音器。",
+            "value": "Megaphone issued next shift."
+        },
+        {
+            "key": "下趟配发散弹枪与弹药",
+            "value": "Shotgun and ammo next shift"
+        },
+        {
+            "key": "下趟配发散弹枪及弹药。",
+            "value": "Shotgun and ammo issued next shift."
+        },
+        {
+            "key": "下趟配发榴弹与弹药",
+            "value": "Grenade launcher and ammo next shift"
+        },
+        {
+            "key": "下趟配发榴弹及弹药。",
+            "value": "Grenade launcher and ammo issued next shift."
+        },
+        {
+            "key": "下趟配发激光枪与弹药",
+            "value": "Rifle and ammo next shift"
+        },
+        {
+            "key": "下趟配发激光枪及弹药。",
+            "value": "Rifle and ammo issued next shift."
+        },
+        {
+            "key": "下趟配发能量汽水。",
+            "value": "Energy soda issued next shift."
+        },
+        {
+            "key": "下趟配发遥控器。",
+            "value": "TV remote issued next shift."
+        },
+        {
+            "key": "下趟配发音响。",
+            "value": "Boombox issued next shift."
+        },
+        {
+            "key": "下趟配发驱虫哨。",
+            "value": "Bug whistle issued next shift."
+        },
+        {
+            "key": "下趟飞行器+1",
+            "value": "+1 aircraft next shift"
+        },
+        {
+            "key": "下趟飞行器库存+1，设施内部署；可吸附废品、回船卸货",
+            "value": "+1 aircraft; deploy in facility; haul scrap to ship"
+        },
+        {
+            "key": "与生命保障叠加，提高容错率。",
+            "value": "Stacks with life insurance for survivability."
+        },
+        {
+            "key": "与防护服搭配可显著延长生存时间。",
+            "value": "Pairs with hazard suit for longer survival."
+        },
+        {
+            "key": "东",
+            "value": "E"
+        },
+        {
+            "key": "东方",
+            "value": "east"
+        },
+        {
+            "key": "中文",
+            "value": "Chinese"
+        },
+        {
+            "key": "中远程稳定输出，适合开阔区域。",
+            "value": "Stable mid-long range; good in open areas."
+        },
+        {
+            "key": "为全队下趟班次延长 2 分钟。",
+            "value": "Adds 2 minutes to next shift for the whole crew."
+        },
+        {
+            "key": "仓储",
+            "value": "Warehouse"
+        },
+        {
+            "key": "价值 {int:minv}~{int:maxv} 元 | 重量 {int:minw}~{int:maxw} 镑",
+            "value": "Value {int:minv}~{int:maxv} | Weight {int:minw}~{int:maxw} lb"
+        },
+        {
+            "key": "会主动追踪视野内的玩家。",
+            "value": "Actively tracks players in line of sight."
+        },
+        {
+            "key": "会主动追逐附近地上的废品。",
+            "value": "Chases scrap on the ground nearby."
+        },
+        {
+            "key": "会用钩爪把最近队员拖向自己。",
+            "value": "Hooks the nearest crewmate toward itself."
+        },
+        {
+            "key": "会用钩爪牵制目标并拉近。",
+            "value": "Hooks and pulls targets closer."
+        },
+        {
+            "key": "会说话的机器人玩具，电池漏液。",
+            "value": "Talking robot toy; leaking batteries."
+        },
+        {
+            "key": "作死神器，请在安全位置再按。",
+            "value": "Troll item — use only when safe."
+        },
+        {
+            "key": "你不能把你自己踢出房间",
+            "value": "You can't kick yourself"
+        },
+        {
+            "key": "你不能把管理员踢出房间",
+            "value": "You can't kick admins"
+        },
+        {
+            "key": "你不能移动自己",
+            "value": "You can't move yourself"
+        },
+        {
+            "key": "你不能踢管理员",
+            "value": "You can't kick admins"
+        },
+        {
+            "key": "你不能踢自己",
+            "value": "You can't kick yourself"
         },
         {
             "key": "你为公司贡献了{int:v}元",
-            "value": "你为公司贡献了{int:v}元"
+            "value": "You contributed {int:v} to the company"
         },
         {
-            "key": "你们没有被解雇，你们会继续在这里工作.",
-            "value": "你们没有被解雇，你们会继续在这里工作."
-        },
-        {
-            "key": "你们没能达成指标...",
-            "value": "你们没能达成指标..."
-        },
-        {
-            "key": "你们被解雇了.",
-            "value": "你们被解雇了."
+            "key": "你们被解雇了。所有进度已重置。",
+            "value": "TERMINATED. All progress reset."
         },
         {
             "key": "你使用了塑料鱼.. 啊啊，磨到了，血量{int:health}",
-            "value": "你使用了塑料鱼.. 啊啊，磨到了，血量{int:health}"
+            "value": "Plastic fish... ouch, scraped yourself. HP {int:health}"
         },
         {
             "key": "你使用了塑料鱼.. 有点硬",
-            "value": "你使用了塑料鱼.. 有点硬"
+            "value": "Plastic fish... kind of hard"
         },
         {
             "key": "你使用了塑料鱼.. 爽！血量+{int:health}",
-            "value": "你使用了塑料鱼.. 爽！血量+{int:health}"
+            "value": "Plastic fish... nice! HP +{int:health}"
         },
         {
             "key": "你使用了机器人玩具.. 啊啊，磨到了，血量{int:health}",
-            "value": "你使用了机器人玩具.. 啊啊，磨到了，血量{int:health}"
+            "value": "Robot toy... ouch. HP {int:health}"
         },
         {
             "key": "你使用了机器人玩具.. 有点硬",
-            "value": "你使用了机器人玩具.. 有点硬"
+            "value": "Robot toy... kind of hard"
         },
         {
             "key": "你使用了机器人玩具.. 爽！血量+{int:health}",
-            "value": "你使用了机器人玩具.. 爽！血量+{int:health}"
+            "value": "Robot toy... nice! HP +{int:health}"
         },
         {
             "key": "你取消了启动飞船的投票",
-            "value": "你取消了启动飞船的投票"
+            "value": "You withdrew your launch vote"
         },
         {
             "key": "你取消了开始游戏的投票",
-            "value": "你取消了开始游戏的投票"
-        },
-        {
-            "key": "你可以在投票界面查看你的背包",
-            "value": "你可以在投票界面查看你的背包"
+            "value": "You withdrew your start vote"
         },
         {
             "key": "你吃下了药.. 怎么是糖??",
-            "value": "你吃下了药.. 怎么是糖??"
+            "value": "You ate the pills... they're candy??"
         },
         {
             "key": "你吃下了药.. 血量+{int:health}",
-            "value": "你吃下了药.. 血量+{int:health}"
+            "value": "You ate the pills... HP +{int:health}"
         },
         {
             "key": "你吃下了药.. 过期了，血量{int:health}",
-            "value": "你吃下了药.. 过期了，血量{int:health}"
+            "value": "Expired pills... HP {int:health}"
         },
         {
             "key": "你吃下了酸黄瓜.. 血量+{int:health}",
-            "value": "你吃下了酸黄瓜.. 血量+{int:health}"
+            "value": "Pickle... HP +{int:health}"
         },
         {
             "key": "你吃下了酸黄瓜.. 靠，这根用过了",
-            "value": "你吃下了酸黄瓜.. 靠，这根用过了"
+            "value": "Pickle... hey, this one was used"
         },
         {
             "key": "你吃下了酸黄瓜.. 靠，这根被男娘用过,血量{int:health}",
-            "value": "你吃下了酸黄瓜.. 靠，这根被男娘用过,血量{int:health}"
+            "value": "Pickle... used by someone else. HP {int:health}"
         },
         {
-            "key": "你喝下了牙膏，hmm, 草莓味的",
-            "value": "你喝下了牙膏，hmm, 草莓味的"
+            "key": "你喝下了牙膏，嗯，草莓味的",
+            "value": "You drank the toothpaste. Mmm, strawberry."
         },
         {
             "key": "你喝下了牙膏，血量+{int:health}",
-            "value": "你喝下了牙膏，血量+{int:health}"
+            "value": "Toothpaste... HP +{int:health}"
         },
         {
             "key": "你喝下了牙膏，过期了.. 血量{int:health}",
-            "value": "你喝下了牙膏，过期了.. 血量{int:health}"
+            "value": "Expired toothpaste... HP {int:health}"
         },
         {
-            "key": "你就会被开除.",
-            "value": "你就会被开除."
+            "key": "你已重新连入远征，背包与位置已恢复",
+            "value": "Reconnected: position and backpack restored"
         },
         {
             "key": "你把路标拿在手上当武器.",
-            "value": "你把路标拿在手上当武器."
+            "value": "You wield the road sign."
         },
         {
             "key": "你把魔法7号球丢了出去，忍者变身！",
-            "value": "你把魔法7号球丢了出去，忍者变身！"
+            "value": "You tossed the magic 8-ball — ninja time!"
         },
         {
-            "key": "你拨打了电话... But nobody come",
-            "value": "你拨打了电话... But nobody come"
+            "key": "你捡起了{lstr:iname}，价值{int:value}元，重量{int:weight}镑（背包总重{int:total}镑）",
+            "value": "Picked up {lstr:iname}, {int:value} value, {int:weight} lb (total {int:total} lb)"
         },
         {
-            "key": "你按下了遥控器... 你仿佛听到远处有人在哀号",
-            "value": "你按下了遥控器... 你仿佛听到远处有人在哀号"
+            "key": "你是公司雇员。在截止日前达成指标。",
+            "value": "You work for the Company. Meet the quota before the deadline."
         },
         {
-            "key": "你捡起了{str:iname},价值{int:value}元",
-            "value": "你捡起了{str:iname},价值{int:value}元"
+            "key": "你是公司雇员：在截止日前达成指标，否则被解雇。",
+            "value": "You work for the Company. Meet the quota before the deadline or get fired."
         },
         {
             "key": "你现在在飞船里了，打开投票界面查看更多",
-            "value": "你现在在飞船里了，打开投票界面查看更多"
+            "value": "You are in the ship. Open vote menu for details"
         },
         {
-            "key": "你现在在: 飞船\\n在投票界面进行游戏选择",
-            "value": "你现在在: 飞船\\n在投票界面进行游戏选择"
+            "key": "你现在在：飞船\n在投票界面进行游戏选择",
+            "value": "You are on the ship\nUse vote menu for options"
         },
         {
             "key": "你用梳子梳了梳头发，神清气爽！",
-            "value": "你用梳子梳了梳头发，神清气爽！"
+            "value": "You combed your hair — refreshed!"
         },
         {
-            "key": "你的生命危在旦夕，叫你的队友来救你\\n(把你钩回飞船上)",
-            "value": "你的生命危在旦夕，叫你的队友来救你\\n(把你钩回飞船上)"
+            "key": "你的生命危在旦夕，叫你的队友来救你\n(把你钩回飞船上)",
+            "value": "You're down — ask teammates to hook you back to the ship"
+        },
+        {
+            "key": "你的贡献: 上交 {int:dep} 元 | 丢失 {int:lost} 元 | 救人 {int:rev} 次 | 死亡 {int:death} 次",
+            "value": "Your stats: deposited {int:dep} | lost {int:lost} | revives {int:rev} | deaths {int:death}"
         },
         {
             "key": "你离开了飞船",
-            "value": "你离开了飞船"
+            "value": "You left the ship"
         },
         {
             "key": "你装备了散弹枪，2发子弹",
-            "value": "你装备了散弹枪，2发子弹"
+            "value": "Equipped shotgun, 2 shells"
         },
         {
             "key": "你装备了金属板.. 防御+{int:health}",
-            "value": "你装备了金属板.. 防御+{int:health}"
+            "value": "Metal sheet equipped — armor +{int:health}"
         },
         {
-            "key": "倒计时结束后飞船起飞，玩家回到主飞船",
-            "value": "倒计时结束后飞船起飞，玩家回到主飞船"
+            "key": "你触发了地雷！",
+            "value": "You triggered a landmine!"
         },
         {
-            "key": "剩余天数: {int:days}",
-            "value": "剩余天数: {int:days}"
+            "key": "你踩中了尖刺陷阱！",
+            "value": "You stepped on a spike trap!"
         },
         {
-            "key": "加入QQ群893554667为本模式投票吧！",
-            "value": "加入QQ群893554667为本模式投票吧！"
+            "key": "使用会伤到自己——纯整蛊。",
+            "value": "Hurts yourself — pure trolling."
         },
         {
-            "key": "在下方投票提前开始游戏",
-            "value": "在下方投票提前开始游戏"
+            "key": "使用后下一件捡到的废品价值翻倍。",
+            "value": "Next scrap picked up is worth double."
         },
         {
-            "key": "在主飞船内投票选择卖出物品",
-            "value": "在主飞船内投票选择卖出物品"
+            "key": "使用后全图怪物眩晕数秒。",
+            "value": "Stuns all monsters for several seconds."
         },
         {
-            "key": "在地图内收集废品并带回飞船",
-            "value": "在地图内收集废品并带回飞船"
+            "key": "使用后向全队广播你的坐标。",
+            "value": "Broadcasts your position to the team."
         },
         {
-            "key": "在飞船里投票可以进入飞船冬眠舱(不会挡到别人)",
-            "value": "在飞船里投票可以进入飞船冬眠舱(不会挡到别人)"
+            "key": "使用后直接增加全队公司币。",
+            "value": "Adds company credits for the whole team."
         },
         {
-            "key": "如果3天后没能达成指标就会被开除",
-            "value": "如果3天后没能达成指标就会被开除"
+            "key": "使用后稳定回复生命值。",
+            "value": "Restores HP reliably."
         },
         {
-            "key": "如果没能在天数结束前达成指标...",
-            "value": "如果没能在天数结束前达成指标..."
+            "key": "使用后获得 2 发散弹弹药。",
+            "value": "Grants 2 shotgun shells."
         },
         {
-            "key": "并在倒计时结束前回到飞船等待起飞",
-            "value": "并在倒计时结束前回到飞船等待起飞"
+            "key": "使用后获得忍者冲刺能力。",
+            "value": "Grants ninja dash."
         },
         {
-            "key": "废品:{str:Name}\\n价值:{int:Value}\\n重量:{int:Weight}\\n使用锤子捡起物品",
-            "value": "废品:{str:Name}\\n价值:{int:Value}\\n重量:{int:Weight}\\n使用锤子捡起物品"
+            "key": "使用后获得护甲。",
+            "value": "Grants armor."
         },
         {
-            "key": "我是魔方大佬！",
-            "value": "我是魔方大佬！"
+            "key": "使用后获得随机护甲值。",
+            "value": "Grants random armor."
         },
         {
-            "key": "投票把物品放在飞船里",
-            "value": "投票把物品放在飞船里"
+            "key": "使用后随机召唤一只怪物。",
+            "value": "Randomly summons a monster."
         },
         {
-            "key": "投票理由为1尝试使用废品",
-            "value": "投票理由为1尝试使用废品"
+            "key": "使用后随机吐出公司币。",
+            "value": "Randomly spits out credits."
         },
         {
-            "key": "指标: {int:money}/{int:quota}",
-            "value": "指标: {int:money}/{int:quota}"
+            "key": "使用后随机回血或扣血。",
+            "value": "Random heal or damage."
+        },
+        {
+            "key": "使用结果随机：可能回血，也可能扣血。",
+            "value": "Random outcome: heal or hurt."
+        },
+        {
+            "key": "便宜轻巧，适合赌运气或凑重量。",
+            "value": "Cheap and light — good for gambling or weight."
+        },
+        {
+            "key": "保持距离时会用手枪远程射击。",
+            "value": "Shoots pistol at range when you keep distance."
+        },
+        {
+            "key": "保障",
+            "value": "Assurance"
+        },
+        {
+            "key": "保障与班次 | 延长班次、护甲、生命、飞行器(可叠加库存)",
+            "value": "Assurance & shift | +time, armor, HP, aircraft (stackable)"
+        },
+        {
+            "key": "假牙",
+            "value": "Dentures"
+        },
+        {
+            "key": "停车标志",
+            "value": "Stop sign"
+        },
+        {
+            "key": "停车标志改装的闪光弹。",
+            "value": "Stop sign converted to flashbang."
+        },
+        {
+            "key": "先用猫，再捡 L3 大件，收益最大化。",
+            "value": "Use lucky cat first, then grab L3 loot."
+        },
+        {
+            "key": "全图眩晕",
+            "value": "Map-wide stun"
+        },
+        {
+            "key": "公司余额: {int:money} / 指标 {int:quota}",
+            "value": "Balance: {int:money} / quota {int:quota}"
+        },
+        {
+            "key": "公司回收的「瓶盖」，实为过期牙膏。",
+            "value": "Company 'bottle cap' — expired toothpaste."
+        },
+        {
+            "key": "公司币全队共享，购买后立即扣款。",
+            "value": "Company credits are shared; charged on purchase."
+        },
+        {
+            "key": "公司认可你们的表现，欢迎回来。",
+            "value": "The Company approves. Welcome back."
+        },
+        {
+            "key": "公司资金不足，无法购买",
+            "value": "Not enough credits"
+        },
+        {
+            "key": "公司配发了忍者刀",
+            "value": "Company issued ninja sword"
+        },
+        {
+            "key": "公司配发了急救包",
+            "value": "Company issued medkit"
+        },
+        {
+            "key": "公司配发了手枪（{int:ammo}发）",
+            "value": "Company issued pistol ({int:ammo} rounds)"
+        },
+        {
+            "key": "公司配发了扩音器",
+            "value": "Company issued megaphone"
+        },
+        {
+            "key": "公司配发了散弹枪（{int:ammo}发）",
+            "value": "Company issued shotgun ({int:ammo} shells)"
+        },
+        {
+            "key": "公司配发了榴弹（{int:ammo}发）",
+            "value": "Company issued grenade launcher ({int:ammo})"
+        },
+        {
+            "key": "公司配发了激光枪（{int:ammo}发）",
+            "value": "Company issued rifle ({int:ammo} rounds)"
+        },
+        {
+            "key": "公司配发了生命保障（+{int:hp}）",
+            "value": "Company issued life insurance (+{int:hp})"
+        },
+        {
+            "key": "公司配发了能量汽水",
+            "value": "Company issued energy soda"
+        },
+        {
+            "key": "公司配发了遥控器",
+            "value": "Company issued TV remote"
+        },
+        {
+            "key": "公司配发了闪光弹装备",
+            "value": "Company issued flashbang gear"
+        },
+        {
+            "key": "公司配发了防护服",
+            "value": "Company issued hazard suit"
+        },
+        {
+            "key": "公司配发了音响",
+            "value": "Company issued boombox"
+        },
+        {
+            "key": "公司配发了飞行器（库存 {int:stock}）",
+            "value": "Company issued aircraft (stock {int:stock})"
+        },
+        {
+            "key": "公司配发了驱虫哨",
+            "value": "Company issued bug whistle"
+        },
+        {
+            "key": "共 {int:num} 件 | 总价值 {int:value} 元",
+            "value": "{int:num} items | total value {int:value}"
+        },
+        {
+            "key": "具备钩爪移动，可能从下方或侧翼出现。",
+            "value": "Hook movement; may appear from below or flanks."
+        },
+        {
+            "key": "具备钩爪移动，可能从意想不到的位置出现。",
+            "value": "Hook movement; may appear unexpectedly."
+        },
+        {
+            "key": "具备飞行能力，可从上方发起攻击。",
+            "value": "Can fly; attacks from above."
+        },
+        {
+            "key": "具备飞行能力，可越过部分地形追击。",
+            "value": "Can fly over some terrain."
+        },
+        {
+            "key": "冻结·待救",
+            "value": "Downed"
+        },
+        {
+            "key": "冻结时用队友锤子救活；登船自动修复",
+            "value": "Hammer revive when downed; ship auto-repairs"
+        },
+        {
+            "key": "别在血量低时赌它。",
+            "value": "Don't gamble on it at low HP."
+        },
+        {
+            "key": "制作人员：{str:c}",
+            "value": "Credits: {str:c}"
+        },
+        {
+            "key": "前方草丛有异动…",
+            "value": "Something stirs in the grass ahead…"
+        },
+        {
+            "key": "加公司币",
+            "value": "Add credits"
+        },
+        {
+            "key": "加护甲",
+            "value": "Add armor"
+        },
+        {
+            "key": "加速",
+            "value": "Speed boost"
+        },
+        {
+            "key": "注视定身·未看秒杀",
+            "value": "Stare to freeze · instakill if ignored"
+        },
+        {
+            "key": "北",
+            "value": "N"
+        },
+        {
+            "key": "北方",
+            "value": "north"
+        },
+        {
+            "key": "南",
+            "value": "S"
+        },
+        {
+            "key": "南方",
+            "value": "south"
+        },
+        {
+            "key": "危险度：{int:stars} 星",
+            "value": "Hazard: {int:stars} stars"
+        },
+        {
+            "key": "又值钱又能保命，优先带回飞船。",
+            "value": "Valuable and protective — bring to ship first."
+        },
+        {
+            "key": "发刷",
+            "value": "Hairbrush"
+        },
+        {
+            "key": "只能在设施内部署飞行器",
+            "value": "Aircraft can only be deployed inside the facility"
+        },
+        {
+            "key": "召唤怪物",
+            "value": "Summon monster"
+        },
+        {
+            "key": "可冲刺攻击，机动性极强。",
+            "value": "Dash attack; very mobile."
+        },
+        {
+            "key": "可消耗",
+            "value": "Consumable"
+        },
+        {
+            "key": "可炸开障碍或范围杀伤怪物。",
+            "value": "Blasts obstacles or monsters in an area."
+        },
+        {
+            "key": "可用语言：{str:ListOfLanguage}",
+            "value": "Available languages: {str:ListOfLanguage}"
+        },
+        {
+            "key": "可贴墙移动，在拐角处尤其危险。",
+            "value": "Wall-crawls; dangerous at corners."
+        },
+        {
+            "key": "可贴墙移动，在狭窄通道里更难瞄准。",
+            "value": "Wall-crawls; hard to aim in tight halls."
+        },
+        {
+            "key": "可靠的回血手段，值得保留。",
+            "value": "Reliable heal — worth keeping."
+        },
+        {
+            "key": "台灯",
+            "value": "Desk lamp"
+        },
+        {
+            "key": "台灯照亮前路，防御+{int:armor}",
+            "value": "Lamp lights the way, armor +{int:armor}"
+        },
+        {
+            "key": "吃废品·限时",
+            "value": "Eats scrap · timed"
+        },
+        {
+            "key": "吐钱",
+            "value": "Spits credits"
+        },
+        {
+            "key": "吸盘怪",
+            "value": "Leech"
+        },
+        {
+            "key": "咕嘟咕嘟！{int:sec}秒内移动加速",
+            "value": "Glug glug! Speed boost for {int:sec}s"
+        },
+        {
+            "key": "商店购买后下趟获得库存",
+            "value": "Buy in store for stock next shift"
+        },
+        {
+            "key": "回血",
+            "value": "Heal"
+        },
+        {
+            "key": "回血并解除冻结/感染等异常。",
+            "value": "Heals and clears freeze/infection."
+        },
+        {
+            "key": "回血解控",
+            "value": "Heal + cleanse"
+        },
+        {
+            "key": "团队必备，感染时立刻使用。",
+            "value": "Team essential when infected."
+        },
+        {
+            "key": "团队控场核心，留到被围时使用。",
+            "value": "Team CC — save for when surrounded."
+        },
+        {
+            "key": "囤积虫",
+            "value": "Hoarding bug"
+        },
+        {
+            "key": "囤积虫正在追 {str:name} 的高价值背包",
+            "value": "Hoarder chasing {str:name}'s valuable backpack"
+        },
+        {
+            "key": "图鉴中有完整说明",
+            "value": "Full details in the guide"
+        },
+        {
+            "key": "在大厅 F3 终端或 ESC 投票均可购买。",
+            "value": "Buy via F3 terminal or ESC vote in lobby."
+        },
+        {
+            "key": "在脚下产生范围冲击，眩晕附近怪物数秒。",
+            "value": "Shockwave at feet stuns nearby monsters."
+        },
+        {
+            "key": "在脚下释放冲击波，眩晕周围怪物。",
+            "value": "Shockwave stuns monsters around you."
+        },
+        {
+            "key": "地图生成中…请稍候，请勿重复投票出发",
+            "value": "Generating map… please wait, don't spam launch vote"
+        },
+        {
+            "key": "地图生成失败，正在自动重试…",
+            "value": "Map gen failed, retrying…"
+        },
+        {
+            "key": "地图生成失败，远征已取消",
+            "value": "Map generation failed — expedition cancelled"
+        },
+        {
+            "key": "地图生成完毕！飞船即将起飞...",
+            "value": "Map ready! Launching soon..."
+        },
+        {
+            "key": "地图种子: {int:seed}",
+            "value": "Map seed: {int:seed}"
+        },
+        {
+            "key": "基础远程武器，弹药较多。",
+            "value": "Basic ranged weapon; plenty of ammo."
+        },
+        {
+            "key": "塑料玩具鱼，毫无营养。",
+            "value": "Plastic toy fish — zero nutrition."
+        },
+        {
+            "key": "大型螺栓",
+            "value": "Large bolt"
+        },
+        {
+            "key": "大型螺栓/金属板碎片。",
+            "value": "Large bolt / metal sheet shard."
+        },
+        {
+            "key": "头目击杀奖励: {int:bonus} 元",
+            "value": "Boss kill bonus: {int:bonus} cr"
+        },
+        {
+            "key": "威胁",
+            "value": "Threat"
+        },
+        {
+            "key": "威胁等级高，应优先集火消灭。",
+            "value": "High threat — focus fire."
+        },
+        {
+            "key": "孢子蜥",
+            "value": "Spore lizard"
+        },
+        {
+            "key": "宅邸",
+            "value": "Mansion"
+        },
+        {
+            "key": "完成班次: {int:rounds} | 总回收: {int:rec} 元",
+            "value": "Shifts done: {int:rounds} | total recovered: {int:rec} cr"
+        },
+        {
+            "key": "实地 ESC 投票选该物品，理由填 1 使用。",
+            "value": "ESC vote item in facility; reason 1 to use."
+        },
+        {
+            "key": "实地消耗品 | 闪光、急救、哨子、汽水等",
+            "value": "Field consumables | flash, medkit, whistle, soda, etc."
+        },
+        {
+            "key": "实验",
+            "value": "Experimentation"
+        },
+        {
+            "key": "对策：一人盯眼、他人输出；切忌全员同时背对。",
+            "value": "Counter: one watches eyes, others DPS; don't all turn away."
+        },
+        {
+            "key": "对策：保持距离远程击杀；备好急救包解控。",
+            "value": "Counter: kite and shoot; medkit for infection."
+        },
+        {
+            "key": "对策：先捡再撤；或用低价值废品引开。",
+            "value": "Counter: loot first or bait with cheap scrap."
+        },
+        {
+            "key": "对策：利用掩体；近战突脸打断射击。",
+            "value": "Counter: use cover; melee interrupt shots."
+        },
+        {
+            "key": "对策：扫描/扩音器定位；投掷物或队友引怪。",
+            "value": "Counter: scan/megaphone; bait with teammates."
+        },
+        {
+            "key": "对策：眩晕/击退后拉开距离集火。",
+            "value": "Counter: stun/knockback then focus fire."
+        },
+        {
+            "key": "对策：远程点杀；切勿贴身补刀或围殴。",
+            "value": "Counter: shoot from range; no melee pile-up."
+        },
+        {
+            "key": "对策：队友集火打断；闪光/哨子控场后拉开距离。",
+            "value": "Counter: team focus; flash/whistle then kite."
+        },
+        {
+            "key": "将携带废品放入船内 (投票放下)",
+            "value": "Place carried scrap in ship (vote to drop)"
+        },
+        {
+            "key": "尖锐哨声让附近怪物僵住了！",
+            "value": "Sharp whistle — nearby monsters frozen!"
+        },
+        {
+            "key": "工厂",
+            "value": "Factory"
+        },
+        {
+            "key": "左键射击 | 右键按朝向升降 | 空格下机",
+            "value": "LMB shoot | RMB up/down | Space exit"
+        },
+        {
+            "key": "左键朝鼠标射击 | 右键按瞄准方向升降 | 空格下机。",
+            "value": "LMB at cursor | RMB rise/fall | Space exit."
+        },
+        {
+            "key": "已为你打开终端引导，请按 F3 查看",
+            "value": "Terminal guide opened — press F3"
+        },
+        {
+            "key": "已放入飞船的废品（只读）",
+            "value": "Scrap already in ship (read-only)"
+        },
+        {
+            "key": "已登船",
+            "value": "On ship"
+        },
+        {
+            "key": "已购买：下趟班次 +2 分钟",
+            "value": "Purchased: +2 min next shift"
+        },
+        {
+            "key": "已购买：下趟班次忍者刀",
+            "value": "Purchased: ninja sword next shift"
+        },
+        {
+            "key": "已购买：下趟班次急救包",
+            "value": "Purchased: medkit next shift"
+        },
+        {
+            "key": "已购买：下趟班次手枪",
+            "value": "Purchased: pistol next shift"
+        },
+        {
+            "key": "已购买：下趟班次扩音器",
+            "value": "Purchased: megaphone next shift"
+        },
+        {
+            "key": "已购买：下趟班次散弹枪",
+            "value": "Purchased: shotgun next shift"
+        },
+        {
+            "key": "已购买：下趟班次榴弹",
+            "value": "Purchased: grenade launcher next shift"
+        },
+        {
+            "key": "已购买：下趟班次激光枪",
+            "value": "Purchased: rifle next shift"
+        },
+        {
+            "key": "已购买：下趟班次生命保障",
+            "value": "Purchased: life insurance next shift"
+        },
+        {
+            "key": "已购买：下趟班次能量汽水",
+            "value": "Purchased: energy soda next shift"
+        },
+        {
+            "key": "已购买：下趟班次遥控器",
+            "value": "Purchased: remote next shift"
+        },
+        {
+            "key": "已购买：下趟班次闪光弹",
+            "value": "Purchased: flashbang next shift"
+        },
+        {
+            "key": "已购买：下趟班次防护服",
+            "value": "Purchased: hazard suit next shift"
+        },
+        {
+            "key": "已购买：下趟班次音响",
+            "value": "Purchased: boombox next shift"
+        },
+        {
+            "key": "已购买：下趟班次飞行器（待发放 {int:count}）",
+            "value": "Purchased: aircraft pending ({int:count})"
+        },
+        {
+            "key": "已购买：下趟班次驱虫哨",
+            "value": "Purchased: bug whistle next shift"
+        },
+        {
+            "key": "已选路线: {lstr:moon}",
+            "value": "Selected MOON: {lstr:moon}"
+        },
+        {
+            "key": "已部署飞行器（剩余库存 {int:stock}）",
+            "value": "Aircraft deployed (stock left {int:stock})"
+        },
+        {
+            "key": "布条怪",
+            "value": "Bracken"
+        },
+        {
+            "key": "带回船上也能卖好价钱。",
+            "value": "Sells well on the ship too."
+        },
+        {
+            "key": "常见 L1 废品，价值一般。",
+            "value": "Common L1 scrap; average value."
+        },
+        {
+            "key": "平时躲在草丛中完全隐藏。",
+            "value": "Hides completely in grass."
+        },
+        {
+            "key": "广播坐标",
+            "value": "Broadcast position"
+        },
+        {
+            "key": "库存: {int:stock}",
+            "value": "Stock: {int:stock}"
+        },
+        {
+            "key": "废品:{str:Name}\n价值:{int:Value}\n重量:{int:Weight}\n使用锤子捡起物品",
+            "value": "Scrap:{str:Name}\nValue:{int:Value}\nWeight:{int:Weight}\nPick up with hammer"
+        },
+        {
+            "key": "延长班次",
+            "value": "+2 min shift"
+        },
+        {
+            "key": "建议现在返回飞船",
+            "value": "Return to ship now"
+        },
+        {
+            "key": "弹簧头",
+            "value": "Coil-Head"
+        },
+        {
+            "key": "弹簧头抓住了你！",
+            "value": "Coil-Head grabbed you!"
+        },
+        {
+            "key": "弹簧头被你的注视定住了",
+            "value": "Coil-head frozen by your stare"
+        },
+        {
+            "key": "弹药有限，优先对付高威胁目标。",
+            "value": "Limited ammo — prioritize high threats."
+        },
+        {
+            "key": "当前: {lstr:moon} {int:stars}星",
+            "value": "Current: {lstr:moon} ({int:stars} hazard)"
+        },
+        {
+            "key": "当前不在飞船内",
+            "value": "Not on the ship right now"
+        },
+        {
+            "key": "当前位置: 公司飞船",
+            "value": "Location: Company ship"
+        },
+        {
+            "key": "当前无已知威胁",
+            "value": "No known threats"
+        },
+        {
+            "key": "当前无法部署飞行器",
+            "value": "Cannot deploy aircraft now"
+        },
+        {
+            "key": "忍者冲刺",
+            "value": "Ninja dash"
+        },
+        {
+            "key": "忍者刀",
+            "value": "Ninja sword"
+        },
+        {
+            "key": "急救包",
+            "value": "Medkit"
+        },
+        {
+            "key": "急救包包扎完毕，血量+{int:health}",
+            "value": "Medkit applied — HP +{int:health}"
+        },
+        {
+            "key": "急救包解除了冻结，血量+{int:health}",
+            "value": "Medkit cleared freeze — HP +{int:health}"
+        },
+        {
+            "key": "总罚金: {int:pen} 元 | 死亡 {int:death} 次 | 被抛弃 {int:ab} 次",
+            "value": "Penalties: {int:pen} cr | deaths {int:death} | abandoned {int:ab}"
+        },
+        {
+            "key": "总重量:{int:lb}镑 价值:{int:value}元 | {int:used}/{int:max} 格",
+            "value": "Weight {int:lb}lb Value {int:value} | {int:used}/{int:max} slots"
+        },
+        {
+            "key": "恶心！你咬到了自己的舌头",
+            "value": "Gross! You bit your own tongue"
+        },
+        {
+            "key": "感染·自毁",
+            "value": "Infection · self-destruct"
+        },
+        {
+            "key": "感染后需尽快回飞船，否则会持续恶化直至任务失败。",
+            "value": "Return to ship after infection or mission fails."
+        },
+        {
+            "key": "成功感染后会短暂停滞并进入自毁倒计时。",
+            "value": "After infecting, pauses briefly then self-destructs."
+        },
+        {
+            "key": "截止日前达成指标，否则全进度重置",
+            "value": "Meet quota before deadline or lose all progress"
+        },
+        {
+            "key": "截止：{int:days} 天",
+            "value": "Deadline: {int:days} days"
+        },
+        {
+            "key": "所有进度已重置。下次加油。",
+            "value": "All progress reset. Good luck next time."
+        },
+        {
+            "key": "手枪",
+            "value": "Pistol"
+        },
+        {
+            "key": "扩音器",
+            "value": "Megaphone"
+        },
+        {
+            "key": "扩音器只听到风声... 附近没有怪物",
+            "value": "Megaphone: only wind... no monsters nearby"
+        },
+        {
+            "key": "扩音器回声: {str:name} @ [{int:x},{int:y}]",
+            "value": "Megaphone echo: {str:name} @ [{int:x},{int:y}]"
+        },
+        {
+            "key": "扩音器，电池勉强够用。",
+            "value": "Megaphone; battery barely works."
+        },
+        {
+            "key": "扫怪物",
+            "value": "Scan monsters"
+        },
+        {
+            "key": "扫描仪：{str:landmark} [{int:x},{int:y}]",
+            "value": "Scanner: {str:landmark} [{int:x},{int:y}]"
+        },
+        {
+            "key": "扫描仪：{str:name} 在 [x:{int:x}, y:{int:y}]",
+            "value": "Scanner: {str:name} at [x:{int:x}, y:{int:y}]"
+        },
+        {
+            "key": "扫描仪：着陆飞船在 [x:{int:x}, y:{int:y}]",
+            "value": "Scanner: landing ship at [x:{int:x}, y:{int:y}]"
+        },
+        {
+            "key": "扫描仪：附近无目标",
+            "value": "Scanner: no targets nearby"
+        },
+        {
+            "key": "扫描并标记最近怪物的位置。",
+            "value": "Scans and marks nearest monster."
+        },
+        {
+            "key": "投票理由 1 = 使用物品",
+            "value": "Vote reason 1 = use item"
+        },
+        {
+            "key": "抛弃罚金: {int:penalty} 元",
+            "value": "Abandon penalty: {int:penalty} cr"
+        },
+        {
+            "key": "抢时间回收、跑毒或撤离时非常好用。",
+            "value": "Great for timed looting or evac."
+        },
+        {
+            "key": "护甲可吸收伤害，适合高危险路线。",
+            "value": "Armor absorbs damage; good on risky moons."
+        },
+        {
+            "key": "拖住后会周期性增加你的负重，越拖越慢。",
+            "value": "Dragging increases your weight over time."
+        },
+        {
+            "key": "招财猫",
+            "value": "Lucky cat"
+        },
+        {
+            "key": "招财猫摇了摇爪子... 下一件捡到的废品价值翻倍！",
+            "value": "Lucky cat waved... next scrap doubled!"
+        },
+        {
+            "key": "招财猫生效！这件废品价值翻倍为 {int:value}元",
+            "value": "Lucky cat! This scrap doubled to {int:value}"
+        },
+        {
+            "key": "招财猫，爪子会动。",
+            "value": "Lucky cat; paw moves."
+        },
+        {
+            "key": "指令: /help /status /about /language",
+            "value": "Commands: /help /status /about /language"
+        },
+        {
+            "key": "指标 {int:money}/{int:quota} | {int:days}天",
+            "value": "Quota {int:money}/{int:quota} | {int:days} days"
+        },
+        {
+            "key": "指标：{int:money}/{int:quota}",
+            "value": "Quota: {int:money}/{int:quota}"
+        },
+        {
+            "key": "按 F3 打开公司终端；ESC 发起投票",
+            "value": "Press F3 for terminal; ESC to vote"
+        },
+        {
+            "key": "按 F3 打开公司终端；ESC 可发起投票",
+            "value": "Press F3 for terminal; ESC to vote"
+        },
+        {
+            "key": "推荐: 延长时间/驱虫哨",
+            "value": "Rec: extra time/whistle"
+        },
+        {
+            "key": "推荐: 扩音器/闪光弹",
+            "value": "Rec: megaphone/flashbang"
+        },
+        {
+            "key": "推荐: 防护服/生命保障/延长时间",
+            "value": "Rec: suit/life support/extra time"
+        },
+        {
+            "key": "提示：F3 打开终端后内容较多，建议 F1 输入 cl_motd_time 100 延长显示。",
+            "value": "Tip: F3 terminal is long; type cl_motd_time 100 in F1 console for longer display."
+        },
+        {
+            "key": "携带: {int:lb}镑 / {int:value}元",
+            "value": "Carrying: {int:lb}lb / {int:value}"
+        },
+        {
+            "key": "收银机",
+            "value": "Cash register"
+        },
+        {
+            "key": "收银机吐出了 {int:money}元",
+            "value": "Cash register dispensed {int:money}"
+        },
+        {
+            "key": "收银机，抽屉卡住了。",
+            "value": "Cash register; drawer stuck."
+        },
+        {
+            "key": "攻势",
+            "value": "Offense"
+        },
+        {
+            "key": "效果结束后注意别被追上。",
+            "value": "Don't get caught after the boost ends."
+        },
+        {
+            "key": "散弹枪",
+            "value": "Shotgun"
+        },
+        {
+            "key": "无护甲时优先使用，比赌血稳。",
+            "value": "Use without armor — safer than gambling HP."
+        },
+        {
+            "key": "无效废品",
+            "value": "Invalid scrap"
+        },
+        {
+            "key": "无效怪物",
+            "value": "Invalid monster"
+        },
+        {
+            "key": "无效条目",
+            "value": "Invalid entry"
+        },
+        {
+            "key": "无效的玩家编号",
+            "value": "Invalid client id"
+        },
+        {
+            "key": "无效的被踢玩家编号",
+            "value": "Invalid client id to kick"
+        },
+        {
+            "key": "无效的观战编号",
+            "value": "Invalid spectator id"
+        },
+        {
+            "key": "未标记的药瓶，别问是什么。",
+            "value": "Unlabeled pills — don't ask what's inside."
+        },
+        {
+            "key": "未知威胁，保持队形并尽快撤离",
+            "value": "Unknown threat — stay grouped and evacuate"
+        },
+        {
+            "key": "未知威胁，保持队形并尽快撤离。",
+            "value": "Unknown threat — stay grouped and evacuate."
+        },
+        {
+            "key": "未知怪物",
+            "value": "Unknown monster"
+        },
+        {
+            "key": "未知语言",
+            "value": "Unknown language"
+        },
+        {
+            "key": "未被注视时会高速追击，极近距离可秒杀。",
+            "value": "Chases fast when not watched; melee instakill."
+        },
+        {
+            "key": "本服务器不允许投票将玩家移至观战",
+            "value": "This server does not allow vote-spectate"
+        },
+        {
+            "key": "本服务器不允许投票踢人",
+            "value": "This server does not allow vote-kick"
         },
         {
             "key": "本轮已结束！",
-            "value": "本轮已结束！"
+            "value": "This round is over!"
+        },
+        {
+            "key": "本页无可用操作",
+            "value": "No actions on this page"
+        },
+        {
+            "key": "机器人玩具",
+            "value": "Robot toy"
+        },
+        {
+            "key": "标准急救包。",
+            "value": "Standard medkit."
+        },
+        {
+            "key": "梳一梳提神——具体效果看运气。",
+            "value": "Comb for a boost — results vary."
+        },
+        {
+            "key": "榴弹",
+            "value": "Grenade launcher"
+        },
+        {
+            "key": "欢迎回来，员工。达成指标，否则将被解雇。",
+            "value": "Welcome back. Meet quota or be terminated."
         },
         {
             "key": "欢迎来到Tee命公司！",
-            "value": "欢迎来到Tee命公司！"
+            "value": "Welcome to LeTeehal Company!"
         },
         {
-            "key": "游戏地图生成中...",
-            "value": "游戏地图生成中..."
+            "key": "正在前往 {lstr:moon} ...",
+            "value": "Routing to {lstr:moon}..."
         },
         {
-            "key": "游戏将在倒计时结束后开始",
-            "value": "游戏将在倒计时结束后开始"
+            "key": "死亡爆炸",
+            "value": "Death explosion"
         },
         {
-            "key": "游戏玩法同致命公司",
-            "value": "游戏玩法同致命公司"
+            "key": "每5班次可能出现首领",
+            "value": "Boss may appear every 5 shifts"
         },
         {
-            "key": "理由为空就放下废品",
-            "value": "理由为空就放下废品"
+            "key": "每5班次可能出现首领，血量更高",
+            "value": "Boss every 5 shifts, more HP"
         },
         {
-            "key": "第{int:rounds}回",
-            "value": "第{int:rounds}回"
+            "key": "比闪光弹省，但范围小很多。",
+            "value": "Cheaper than flashbang; smaller radius."
         },
         {
-            "key": "绚丽台灯，我想在家里摆一个",
-            "value": "绚丽台灯，我想在家里摆一个"
+            "key": "比闪光弹范围小，但更精准省资源。",
+            "value": "Smaller than flashbang but precise and cheap."
         },
         {
-            "key": "老年人用的假牙，恶心",
-            "value": "老年人用的假牙，恶心"
+            "key": "汽水",
+            "value": "Energy soda"
         },
         {
-            "key": "背包内物品##总重量:{int:lb}镑,总价值:{int:value}元",
-            "value": "背包内物品##总重量:{int:lb}镑,总价值:{int:value}元"
+            "key": "泡菜罐",
+            "value": "Pickle jar"
         },
         {
-            "key": "语言成功切换为中文",
-            "value": "语言成功切换为中文"
+            "key": "注意友伤，投掷前确认队友位置。",
+            "value": "Watch friendly fire before throwing."
         },
         {
-            "key": "输入/help获取游戏玩法",
-            "value": "输入/help获取游戏玩法"
+            "key": "消耗",
+            "value": "Consume"
+        },
+        {
+            "key": "源码：{str:c}",
+            "value": "Source: {str:c}"
+        },
+        {
+            "key": "滚轮选择/开火确认/钩索返回",
+            "value": "Scroll select / fire confirm / hook back"
+        },
+        {
+            "key": "滚轮选物品，左键确认使用",
+            "value": "Scroll item, LMB to use"
+        },
+        {
+            "key": "滚轮选物品，左键确认放下",
+            "value": "Scroll item, LMB to drop"
+        },
+        {
+            "key": "激光枪",
+            "value": "Rifle"
+        },
+        {
+            "key": "爆壳虫",
+            "value": "Jester"
+        },
+        {
+            "key": "爆炸可误伤队友，注意站位。",
+            "value": "Explosion hurts teammates — mind positioning."
+        },
+        {
+            "key": "猎枪",
+            "value": "Hunting shotgun"
+        },
+        {
+            "key": "猛禽",
+            "value": "Baboon hawk"
+        },
+        {
+            "key": "玩具鱼",
+            "value": "Toy fish"
+        },
+        {
+            "key": "玩家靠近时会突然伏击并钩爪攻击。",
+            "value": "Ambushes and hooks when players approach."
+        },
+        {
+            "key": "班次 {int:rounds} | 截止 {int:days}天 | 指标 {int:money}/{int:quota}",
+            "value": "Shift {int:rounds} | {int:days} days left | Quota {int:money}/{int:quota}"
+        },
+        {
+            "key": "理由 1 使用：全图眩晕怪物数秒。",
+            "value": "Reason 1: stun all monsters for seconds."
+        },
+        {
+            "key": "理由 1 使用：回复生命并解除冻结/感染。",
+            "value": "Reason 1: heal and clear freeze/infection."
+        },
+        {
+            "key": "理由 1 使用：扫描并广播最近怪物坐标。",
+            "value": "Reason 1: scan and broadcast nearest monster."
+        },
+        {
+            "key": "理由 1 使用：短期大幅提升移动速度。",
+            "value": "Reason 1: short speed boost."
+        },
+        {
+            "key": "理由 1 使用：短距离定向眩晕怪物。",
+            "value": "Reason 1: short-range targeted stun."
+        },
+        {
+            "key": "理由 1 使用：随机召唤一只怪物。",
+            "value": "Reason 1: summon a random monster."
+        },
+        {
+            "key": "理由1使用，理由空放下",
+            "value": "Reason 1 use; empty reason drop"
+        },
+        {
+            "key": "理由1：下一件废品价值翻倍",
+            "value": "Reason 1: next scrap worth double"
+        },
+        {
+            "key": "理由1：作死，会伤到自己",
+            "value": "Reason 1: troll — hurts yourself"
+        },
+        {
+            "key": "理由1：全图眩晕怪物数秒",
+            "value": "Reason 1: map-wide monster stun"
+        },
+        {
+            "key": "理由1：向全队广播你的坐标",
+            "value": "Reason 1: broadcast your position"
+        },
+        {
+            "key": "理由1：回血并解除冻结",
+            "value": "Reason 1: heal and clear freeze"
+        },
+        {
+            "key": "理由1：扫描最近怪物位置",
+            "value": "Reason 1: scan nearest monster"
+        },
+        {
+            "key": "理由1：消耗品，梳头发提神",
+            "value": "Reason 1: consumable comb boost"
+        },
+        {
+            "key": "理由1：直接增加公司币",
+            "value": "Reason 1: add company credits"
+        },
+        {
+            "key": "理由1：短期移动加速",
+            "value": "Reason 1: short speed boost"
+        },
+        {
+            "key": "理由1：短距离眩晕怪物",
+            "value": "Reason 1: short-range stun"
+        },
+        {
+            "key": "理由1：稳定回复生命",
+            "value": "Reason 1: reliable heal"
+        },
+        {
+            "key": "理由1：范围眩晕怪物（闪光弹）",
+            "value": "Reason 1: AoE stun (flashbang)"
+        },
+        {
+            "key": "理由1：获得2发散弹",
+            "value": "Reason 1: gain 2 shotgun shells"
+        },
+        {
+            "key": "理由1：获得忍者冲刺能力",
+            "value": "Reason 1: ninja dash"
+        },
+        {
+            "key": "理由1：获得护甲",
+            "value": "Reason 1: gain armor"
+        },
+        {
+            "key": "理由1：获得随机护甲",
+            "value": "Reason 1: random armor"
+        },
+        {
+            "key": "理由1：装备路牌，锤击伤害更高",
+            "value": "Reason 1: equip sign — stronger hammer"
+        },
+        {
+            "key": "理由1：随机召唤一只怪物",
+            "value": "Reason 1: summon random monster"
+        },
+        {
+            "key": "理由1：随机吐出公司币",
+            "value": "Reason 1: random credits"
+        },
+        {
+            "key": "理由1：随机回血或扣血",
+            "value": "Reason 1: random heal or damage"
+        },
+        {
+            "key": "理由为空 = 放下物品",
+            "value": "Empty reason = drop item"
+        },
+        {
+            "key": "理由为空 = 放入飞船",
+            "value": "Empty reason = place in ship"
+        },
+        {
+            "key": "瓶盖",
+            "value": "Bottle cap"
+        },
+        {
+            "key": "生命保障",
+            "value": "Life insurance"
+        },
+        {
+            "key": "用法: /help [1-4|store|monsters|scrap]",
+            "value": "Usage: /help [1-4|store|monsters|scrap]"
+        },
+        {
+            "key": "电视遥控器，按钮大多已失灵。",
+            "value": "TV remote; most buttons dead."
+        },
+        {
+            "key": "电话那头传来 {str:name} 的坐标 [x:{int:x}, y:{int:y}]",
+            "value": "Phone call reveals {str:name} at [x:{int:x}, y:{int:y}]"
+        },
+        {
+            "key": "直接提高血上限，减少被秒杀风险。",
+            "value": "Raises max HP; less instadeath risk."
+        },
+        {
+            "key": "相当于一次免费扫描。",
+            "value": "Like a free scan."
+        },
+        {
+            "key": "相当于免费扫描，适合探路员。",
+            "value": "Free scan — great for scouts."
+        },
+        {
+            "key": "眩晕怪物",
+            "value": "Stun monsters"
+        },
+        {
+            "key": "短期大幅加速，适合撤离或抢时间。",
+            "value": "Big short speed boost for evac or timing."
+        },
+        {
+            "key": "短眩晕",
+            "value": "Short stun"
+        },
+        {
+            "key": "短距离眩晕最近的一只怪物。",
+            "value": "Short-range stun on nearest monster."
+        },
+        {
+            "key": "矿道",
+            "value": "Mines"
+        },
+        {
+            "key": "研究区",
+            "value": "Research"
+        },
+        {
+            "key": "破损散弹枪，还能打两发。",
+            "value": "Broken shotgun — two shots left."
+        },
+        {
+            "key": "碰到废品后会连同废品一起消失（被吃掉）。",
+            "value": "Eats scrap it touches — both vanish."
+        },
+        {
+            "key": "离线",
+            "value": "Offline"
+        },
+        {
+            "key": "移动慢，贴近或死亡时爆炸；远程击杀，避免围殴",
+            "value": "Slow; explodes up close or on death — kite it"
+        },
+        {
+            "key": "移动较慢，但贴近玩家时会自爆。",
+            "value": "Slow but explodes when close."
+        },
+        {
+            "key": "第 {int:rounds} 班次",
+            "value": "Shift {int:rounds}"
+        },
+        {
+            "key": "约 60 秒后也会自行消散，威胁不大但会浪费战利品。",
+            "value": "Despawns in ~60s — wastes loot if ignored."
+        },
+        {
+            "key": "终极控场道具，适合被围攻时翻盘。",
+            "value": "Ultimate CC when surrounded."
+        },
+        {
+            "key": "终极控场，一按扭转战局。",
+            "value": "Ultimate CC — one press turns the fight."
+        },
+        {
+            "key": "绚丽台灯，玻璃极易碎。",
+            "value": "Fancy lamp; glass breaks easily."
+        },
+        {
+            "key": "缺枪时可当防身工具。",
+            "value": "Melee backup when unarmed."
+        },
+        {
+            "key": "老式电话",
+            "value": "Old phone"
+        },
+        {
+            "key": "老式电话，还能拨号。",
+            "value": "Old phone — still dials."
+        },
+        {
+            "key": "老式音响，低音炮仍能用。",
+            "value": "Old boombox; subwoofer still works."
+        },
+        {
+            "key": "背包为空",
+            "value": "Backpack empty"
+        },
+        {
+            "key": "背包已满！最多携带 {int:max} 件废品",
+            "value": "Inventory full! Max {int:max} items"
+        },
+        {
+            "key": "能量汽水",
+            "value": "Energy soda"
+        },
+        {
+            "key": "自伤",
+            "value": "Self-damage"
+        },
+        {
+            "key": "自动吸附附近废品(不含飞船内)，最多 16 件。",
+            "value": "Auto-grabs nearby scrap (not in ship), max 16."
+        },
+        {
+            "key": "自动吸附附近废品(不含飞船内)，最多16件",
+            "value": "Auto-grabs nearby scrap (not in ship), max 16"
+        },
+        {
+            "key": "船上 {int:num} 件 / {int:value} 元",
+            "value": "On ship: {int:num} items / {int:value} cr"
+        },
+        {
+            "key": "船上: {int:num} 件 / {int:value} 元",
+            "value": "On ship: {int:num} items / {int:value}"
+        },
+        {
+            "key": "船上价值 {int:value} 元 | 距指标差 {int:need} 元",
+            "value": "Ship value {int:value} cr | {int:need} cr to quota"
+        },
+        {
+            "key": "船上暂无废品",
+            "value": "No scrap on ship"
+        },
+        {
+            "key": "英语",
+            "value": "English"
+        },
+        {
+            "key": "草丛中突然窜出蔓背怪！",
+            "value": "A Bracken lunges from the grass!"
+        },
+        {
+            "key": "草丛伏击·免伤",
+            "value": "Grass ambush · immune while hidden"
+        },
+        {
+            "key": "草丛隐藏伏击；隐藏时免伤，贴近后自毁，需扫描或引怪",
+            "value": "Grass ambush; immune while hidden; self-destructs close — scan or bait"
+        },
+        {
+            "key": "药瓶",
+            "value": "Pill bottle"
+        },
+        {
+            "key": "蔓背怪",
+            "value": "Bracken"
+        },
+        {
+            "key": "血量(护甲+生命)归零后会立即消灭；部分怪物有自毁计时",
+            "value": "HP (armor+health) zero = death; some self-destruct"
+        },
+        {
+            "key": "血量归零会立即被消灭，优先集火。",
+            "value": "Zero HP = instant death — focus fire."
+        },
+        {
+            "key": "血量归零立即死亡；囤积虫约60秒消散，多种怪贴近后会自毁",
+            "value": "Zero HP = death; hoarder despawns ~60s; many self-destruct when close"
+        },
+        {
+            "key": "血量满时不必冒险。",
+            "value": "Skip the gamble at full HP."
+        },
+        {
+            "key": "被击杀时也会爆炸，对周围造成范围伤害。",
+            "value": "Explodes on death — AoE damage."
+        },
+        {
+            "key": "被围殴或需要抢路撤离时非常实用。",
+            "value": "Great when surrounded or rushing evac."
+        },
+        {
+            "key": "被孢子蜥感染或倒地时的救命消耗品。",
+            "value": "Lifesaver when infected or down."
+        },
+        {
+            "key": "被注视定身，未注视时追击并近身秒杀；血量归零立即死亡",
+            "value": "Freezes when watched; chases and instakills otherwise"
+        },
+        {
+            "key": "被玩家注视时会定身无法行动。",
+            "value": "Freezes while a player watches it."
+        },
+        {
+            "key": "西",
+            "value": "W"
+        },
+        {
+            "key": "西方",
+            "value": "west"
+        },
+        {
+            "key": "见到就捡，别犹豫。",
+            "value": "Grab it — don't hesitate."
+        },
+        {
+            "key": "誓约",
+            "value": "Vow"
+        },
+        {
+            "key": "警告：你尚未登船，舱门关闭后将被抛弃！",
+            "value": "Warning: not on ship — you will be abandoned!"
+        },
+        {
+            "key": "设施: {lstr:fac}",
+            "value": "Facility: {lstr:fac}"
+        },
+        {
+            "key": "设施: {lstr:fac} | 主题: {str:theme}",
+            "value": "Facility: {lstr:fac} | Theme: {str:theme}"
+        },
+        {
+            "key": "设施内",
+            "value": "In facility"
+        },
+        {
+            "key": "设施内 F3「飞行器」页部署，靠近自动上机。",
+            "value": "Deploy via F3 aircraft page in facility; walk on to board."
+        },
+        {
+            "key": "设施内 | 班次剩余 {int:sec} 秒",
+            "value": "In facility | {int:sec}s left in shift"
+        },
+        {
+            "key": "设施内发现 {int:count} 处固定房间（电池房/保险丝间/发电机室）",
+            "value": "Found {int:count} fixed rooms (battery/fuse/generator)"
+        },
+        {
+            "key": "设施地图生成中...",
+            "value": "Generating facility map..."
+        },
+        {
+            "key": "设施地图生成中，请稍候…",
+            "value": "Generating facility map, please wait…"
+        },
+        {
+            "key": "该格已空或无效",
+            "value": "Slot empty or invalid"
+        },
+        {
+            "key": "语言已切换为: {lstr:lang}",
+            "value": "Language switched to: {lstr:lang}"
+        },
+        {
+            "key": "请先选择操作方式",
+            "value": "Choose an action first"
+        },
+        {
+            "key": "购买后下趟出发生效",
+            "value": "Takes effect on next departure"
+        },
+        {
+            "key": "购买后下趟出发生效；公司币全队共享",
+            "value": "Applies next launch; credits are shared"
+        },
+        {
+            "key": "贴近后会进入自毁倒计时，草丛区务必小心。",
+            "value": "Self-destruct countdown when close — mind grass."
+        },
+        {
+            "key": "贴近后会进入自毁倒计时，被吸时很难挣脱。",
+            "value": "Self-destruct when close — hard to escape the pull."
+        },
+        {
+            "key": "贴近目标后会进入自毁倒计时，但仍需尽快击杀。",
+            "value": "Self-destruct when close — kill it fast anyway."
+        },
+        {
+            "key": "距指标还差 {int:need} 元",
+            "value": "{int:need} cr to quota"
+        },
+        {
+            "key": "路标",
+            "value": "Road sign"
+        },
+        {
+            "key": "路牌武器",
+            "value": "Sign weapon"
+        },
+        {
+            "key": "路牌，可装备为近战武器。",
+            "value": "Road sign — equip as melee weapon."
+        },
+        {
+            "key": "路线：{lstr:moon}",
+            "value": "Route: {lstr:moon}"
+        },
+        {
+            "key": "输入 /help 1 ~ /help 4 查看分步教程",
+            "value": "Type /help 1 through /help 4 for steps"
+        },
+        {
+            "key": "输入 /help 1 查看分步教程 | /status 查看任务",
+            "value": "Type /help 1 for tutorial | /status for mission"
+        },
+        {
+            "key": "近旁",
+            "value": "nearby"
+        },
+        {
+            "key": "近距离持续吸取生命值。",
+            "value": "Drains HP at close range."
+        },
+        {
+            "key": "近距离爆发高，适合清走廊与房间。",
+            "value": "High close burst — clears rooms."
+        },
+        {
+            "key": "还可继续搜索",
+            "value": "Room to keep searching"
         },
         {
             "key": "这个服务器禁止了自杀.",
-            "value": "这个服务器禁止了自杀."
+            "value": "Suicide is disabled on this server."
         },
         {
-            "key": "这是2024年第一届TMJ大赛的参赛作品之一",
-            "value": "这是2024年第一届TMJ大赛的参赛作品之一"
+            "key": "远程射击·飞行",
+            "value": "Ranged · flying"
         },
         {
-            "key": "这是收银机，里面有银银银银银银银和金金金金金金金",
-            "value": "这是收银机，里面有银银银银银银银和金金金金金金金"
+            "key": "迷路或需要支援时非常有用。",
+            "value": "Great when lost or needing backup."
         },
         {
-            "key": "这是金金金金金金金金条",
-            "value": "这是金金金金金金金金条"
+            "key": "追踪并远程手枪射击；具备飞行，优先集火",
+            "value": "Tracks and shoots; flies — priority target"
+        },
+        {
+            "key": "追逐废品并吞食；约60秒自行消散，也可被击杀",
+            "value": "Chases and eats scrap; despawns ~60s or kill it"
+        },
+        {
+            "key": "适合作为副武器或新手配装。",
+            "value": "Good sidearm or starter loadout."
+        },
+        {
+            "key": "适合指标吃紧、需要多搜几间房的局面。",
+            "value": "When quota is tight and you need more rooms."
+        },
+        {
+            "key": "适合绕后、穿洞或快速脱离。",
+            "value": "Good for flanks, holes, quick escapes."
+        },
+        {
+            "key": "遇首领或怪海时极其实用。",
+            "value": "Great vs bosses or swarms."
+        },
+        {
+            "key": "遥控器",
+            "value": "TV remote"
+        },
+        {
+            "key": "配发停车标志，投票理由1使用，范围眩晕怪物",
+            "value": "Stop-sign flashbang; vote reason 1 for AoE stun"
+        },
+        {
+            "key": "配发急救包",
+            "value": "Issue medkit"
+        },
+        {
+            "key": "配发急救包，理由1使用回血并解控",
+            "value": "Medkit; reason 1 heal + cleanse"
+        },
+        {
+            "key": "配发扩音器",
+            "value": "Issue megaphone"
+        },
+        {
+            "key": "配发扩音器，理由1扫描最近怪物",
+            "value": "Megaphone; reason 1 scans nearest monster"
+        },
+        {
+            "key": "配发汽水",
+            "value": "Issue soda"
+        },
+        {
+            "key": "配发汽水，理由1使用短期加速",
+            "value": "Soda; reason 1 short speed boost"
+        },
+        {
+            "key": "配发遥控器",
+            "value": "Issue remote"
+        },
+        {
+            "key": "配发遥控器，理由1随机召唤怪物",
+            "value": "Remote; reason 1 random summon"
+        },
+        {
+            "key": "配发闪光弹",
+            "value": "Issue flashbang"
+        },
+        {
+            "key": "配发音响",
+            "value": "Issue boombox"
+        },
+        {
+            "key": "配发音响，理由1全图眩晕怪物",
+            "value": "Boombox; reason 1 map-wide stun"
+        },
+        {
+            "key": "配发驱虫哨",
+            "value": "Issue bug whistle"
+        },
+        {
+            "key": "配发驱虫哨，理由1使用短距眩晕",
+            "value": "Whistle; reason 1 short stun"
+        },
+        {
+            "key": "配合队形推进，避免落单被钩爪拖走。",
+            "value": "Push as a team — don't get hooked alone."
+        },
+        {
+            "key": "重量低，紧急时刻可扔掉减负。",
+            "value": "Light — drop to shed weight in a pinch."
+        },
+        {
+            "key": "重量越大移动越慢，注意班次倒计时",
+            "value": "More weight = slower; watch shift timer"
+        },
+        {
+            "key": "金条",
+            "value": "Gold bar"
+        },
+        {
+            "key": "金条化作公司资金 +{int:money}元",
+            "value": "Gold bar converted to +{int:money} company funds"
+        },
+        {
+            "key": "金条，质检员看见会两眼放光。",
+            "value": "Gold bar — inspectors love it."
+        },
+        {
+            "key": "钩爪+加重·自毁",
+            "value": "Hook + weight · self-destruct"
+        },
+        {
+            "key": "钩爪吸血·自毁",
+            "value": "Hook drain · self-destruct"
+        },
+        {
+            "key": "钩爪拉近并吸血；贴近后自毁，需控场后集火",
+            "value": "Hook drain; self-destructs close — CC then focus"
+        },
+        {
+            "key": "钩爪拖近玩家并加重；贴近后自毁，血量归零立即死亡",
+            "value": "Hooks and weighs you down; self-destructs; zero HP = death"
+        },
+        {
+            "key": "锤击伤害高于普通拳头。",
+            "value": "Hammer hits harder than fists."
+        },
+        {
+            "key": "锤子拾取，ESC/F3 理由 1 使用，理由空放下。",
+            "value": "Hammer pickup; ESC/F3 reason 1 use, empty drop."
+        },
+        {
+            "key": "锤子拾取；背包超重会减速",
+            "value": "Hammer pickup; overweight backpack slows you"
+        },
+        {
+            "key": "闪光弹",
+            "value": "Flashbang"
+        },
+        {
+            "key": "防护服",
+            "value": "Hazard suit"
+        },
+        {
+            "key": "附近空间不足，无法部署飞行器",
+            "value": "Not enough space to deploy aircraft"
+        },
+        {
+            "key": "除非想害队友，否则别按理由 1。",
+            "value": "Don't press reason 1 unless trolling teammates."
+        },
+        {
+            "key": "随机回血",
+            "value": "Random heal"
+        },
+        {
+            "key": "隐藏状态下无法被普通攻击命中。",
+            "value": "Cannot be hit while hidden."
+        },
+        {
+            "key": "需要更多员工才能出发",
+            "value": "Need more employees to launch"
+        },
+        {
+            "key": "需要至少 {int:need} 名员工才能出发",
+            "value": "Need at least {int:need} employees to launch"
+        },
+        {
+            "key": "靠近后会感染玩家（韭菜盒子病毒）。",
+            "value": "Infects players nearby (leek virus)."
+        },
+        {
+            "key": "靠近感染玩家；成功后短暂停滞并自毁，需尽快回飞船",
+            "value": "Infects on contact; pauses then self-destructs — return to ship"
+        },
+        {
+            "key": "音响",
+            "value": "Boombox"
+        },
+        {
+            "key": "飞回飞船区域自动卸下",
+            "value": "Auto-unloads when back at ship zone"
+        },
+        {
+            "key": "飞回飞船自动卸货到船中心，计入你的贡献分。",
+            "value": "Unloads at ship center; counts toward your score."
+        },
+        {
+            "key": "飞船回收: {int:value} 元",
+            "value": "Ship recovered: {int:value} cr"
+        },
+        {
+            "key": "飞船回收: {int:value}元 | 抛弃罚金: {int:penalty}元 | 公司余额: {int:money}元",
+            "value": "Ship: {int:value} | Fine: {int:penalty} | Balance: {int:money}"
         },
         {
             "key": "飞船坐标:[x:{int:x}, y:{int:y}]",
-            "value": "飞船坐标:[x:{int:x}, y:{int:y}]"
+            "value": "Ship position: [x:{int:x}, y:{int:y}]"
+        },
+        {
+            "key": "飞行器",
+            "value": "Aircraft"
+        },
+        {
+            "key": "飞行器库存: {int:stock}",
+            "value": "Aircraft stock: {int:stock}"
+        },
+        {
+            "key": "飞行器库存不足，请先在商店购买",
+            "value": "No aircraft stock — buy in store first"
+        },
+        {
+            "key": "驱虫哨",
+            "value": "Bug whistle"
+        },
+        {
+            "key": "驱虫哨，声音尖锐。",
+            "value": "Bug whistle — sharp sound."
+        },
+        {
+            "key": "高价值废品，别轻易放下。",
+            "value": "High-value scrap — don't drop lightly."
+        },
+        {
+            "key": "高糖能量汽水，喝完腿软之前跑得飞快。",
+            "value": "Sugary soda — run fast before the crash."
+        },
+        {
+            "key": "高风险高回报，可用于引怪或整蛊队友。",
+            "value": "High risk/reward — bait monsters or troll teammates."
+        },
+        {
+            "key": "魔方",
+            "value": "Rubik's cube"
+        },
+        {
+            "key": "魔方旋转出奇迹，血量+{int:health}",
+            "value": "The cube spins! Health +{int:health}"
+        },
+        {
+            "key": "魔方，据说能锻炼脑力。",
+            "value": "Rubik's cube — brain training, allegedly."
+        },
+        {
+            "key": "魔法七号球，回答总是「再试一次」。",
+            "value": "Magic 8-ball always says 'try again'."
+        },
+        {
+            "key": "魔法八音盒",
+            "value": "Magic 8-ball"
+        },
+        {
+            "key": "鸣谢：{str:c}",
+            "value": "Thanks to: {str:c}"
+        },
+        {
+            "key": "（船上暂无废品）",
+            "value": "(No scrap on ship)"
         }
     ]
 }

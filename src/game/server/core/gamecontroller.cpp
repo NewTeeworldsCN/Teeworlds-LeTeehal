@@ -7,15 +7,22 @@
 
 #include "gamecontroller.h"
 #include "gamecontext.h"
+#include "../lc/expedition/balance.h"
+#include "../lc/expedition/moons.h"
+#include "../lc/ui/gameplay_ui.h"
+#include "../lc/economy/company_stats.h"
+#include "../lc/ui/terminal_actions.h"
 
-#include "entities/pickup.h"
-#include "entities/ship.h"
+#include "../entities/core/pickup.h"
+#include "../entities/lc/ship.h"
+#include "../entities/lc/turret.h"
 
 CGameController::CGameController(class CGameContext *pGameServer)
 {
 	m_pGameServer = pGameServer;
 	m_pServer = m_pGameServer->Server();
 	m_pGameType = "LeteehalCompany";
+	m_pShip = 0;
 
 	//
 	DoWarmup(g_Config.m_SvWarmup);
@@ -34,15 +41,25 @@ CGameController::CGameController(class CGameContext *pGameServer)
 	m_aNumSpawnPoints[1] = 0;
 	m_aNumSpawnPoints[2] = 0;
 
-	m_PrepareTick = 50;
+	m_PrepareTick = m_pServer->m_LocateGame == LOCATE_GAME ? 50 : 0;
 
-	m_LaunchShip = false;
+	m_ExpeditionPhase = m_pServer->m_LocateGame == LOCATE_GAME ? LC_PHASE_EXPEDITION : LC_PHASE_LOBBY_IDLE;
+	m_ReturnFinalized = false;
+	m_LastRoundShipValue = 0;
+	m_LastRoundPenalty = 0;
+	m_LastRoundEarnings = 0;
 	m_ReloadTick = 0;
+	m_FacilityMarkersBuilt = false;
 
 	m_MonsterSpawnNum = 0;
 	m_MonsterSpawnCurrentNum = 0;
 
-	m_EndRound2 = false;
+	m_LastLobbyBroadcastTick = 0;
+	m_TimeWarningMask = 0;
+	m_LastBroadcastRemainingSec = -1;
+	m_ReturnDoorCloseSec = 0;
+	m_LastReturnDoorBroadcastSec = -1;
+	m_ExpeditionTimeBonusSec = 0;
 }
 
 CGameController::~CGameController()
@@ -65,6 +82,55 @@ float CGameController::EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos)
 	}
 
 	return Score;
+}
+
+bool CGameController::IsSpawnSafe(vec2 Pos) const
+{
+	if(GameServer()->Collision()->TestBox(Pos, vec2(28.0f, 28.0f)))
+		return false;
+	if(GameServer()->Collision()->CheckPoint(Pos.x, Pos.y))
+		return false;
+	for(int dy = 20; dy <= 52; dy += 16)
+	{
+		if(GameServer()->Collision()->CheckPoint(Pos.x + 14.0f, Pos.y + (float)dy))
+			return true;
+		if(GameServer()->Collision()->CheckPoint(Pos.x - 14.0f, Pos.y + (float)dy))
+			return true;
+	}
+	return false;
+}
+
+bool CGameController::GetSafeSpawnNear(vec2 Center, vec2 *pOut, float MaxRadius) const
+{
+	if(IsSpawnSafe(Center))
+	{
+		*pOut = Center;
+		return true;
+	}
+
+	const vec2 Offsets[] = {
+		vec2(0, -32), vec2(32, 0), vec2(-32, 0), vec2(0, 32),
+		vec2(32, -32), vec2(-32, -32), vec2(64, 0), vec2(-64, 0),
+		vec2(0, -64), vec2(32, 32), vec2(-32, 32), vec2(64, -32),
+		vec2(-64, -32), vec2(96, 0), vec2(-96, 0), vec2(0, -96),
+	};
+
+	for(int Ring = 1; Ring <= 4; Ring++)
+	{
+		for(unsigned i = 0; i < sizeof(Offsets)/sizeof(Offsets[0]); i++)
+		{
+			vec2 Pos = Center + Offsets[i] * (float)Ring;
+			if(distance(Center, Pos) > MaxRadius)
+				continue;
+			if(IsSpawnSafe(Pos))
+			{
+				*pOut = Pos;
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void CGameController::EvaluateSpawnType(CSpawnEval *pEval, int Type)
@@ -114,6 +180,17 @@ bool CGameController::CanSpawn(int Team, vec2 *pOutPos)
 		EvaluateSpawnType(&Eval, 0);
 		EvaluateSpawnType(&Eval, 1);
 		EvaluateSpawnType(&Eval, 2);
+	}
+
+	if(!Eval.m_Got && Server()->m_LocateGame == LOCATE_GAME)
+	{
+		if(m_aNumSpawnPoints[0] > 0)
+		{
+			*pOutPos = m_aaSpawnPoints[0][0];
+			return true;
+		}
+		if(m_pShip && GetSafeSpawnNear(m_pShip->m_Pos, pOutPos, 960.0f))
+			return true;
 	}
 
 	*pOutPos = Eval.m_Pos;
@@ -191,6 +268,10 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 	case ENTITY_MONSTER_SPAWN:
 		m_aMonsterSpawnPos.add(Pos);
 		break;
+
+	case ENTITY_TURRET:
+		new CTurret(&GameServer()->m_World, Pos);
+		break;
 	default:
 		break;
 	}
@@ -208,12 +289,25 @@ bool CGameController::OnEntity(int Index, vec2 Pos)
 
 void CGameController::EndRound()
 {
-	if(m_LaunchShip)
+	if(m_ExpeditionPhase == LC_PHASE_RETURNING || m_ExpeditionPhase == LC_PHASE_MAP_GENERATING || m_ExpeditionPhase == LC_PHASE_DEPARTING)
 		return;
 
-	GameServer()->SendChatTarget(-1, _("[警告]为保证公司利益最大化，飞船已起飞"));
-	m_LaunchShip = true;
-	g_Config.m_GcMoney += m_pShip->GetValue();
+	if(!m_pShip)
+		return;
+
+	GameServer()->SendChatTarget(-1, _("[公司] 班次结束 — 飞船即将起飞"));
+	m_ExpeditionPhase = LC_PHASE_RETURNING;
+	m_ReturnFinalized = false;
+	m_ReturnDoorCloseSec = 5;
+	m_LastReturnDoorBroadcastSec = -1;
+	m_GameOverTick = Server()->Tick() + m_ReturnDoorCloseSec * Server()->TickSpeed();
+	m_LastRoundShipValue = m_pShip->GetValue();
+	m_LastRoundEarnings = m_LastRoundShipValue;
+	int PrevMoney = g_Config.m_GcMoney;
+	g_Config.m_GcMoney += m_LastRoundShipValue;
+	LcCheckQuotaMilestones(GameServer(), PrevMoney);
+	GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_GAMEANNOUNCE, Server()->TickSpeed() * 2,
+		_("【公司】舱门将在 {int:sec} 秒后关闭 — 未登船将被抛弃"), "sec", &m_ReturnDoorCloseSec);
 }
 
 void CGameController::ResetGame()
@@ -225,11 +319,22 @@ static bool IsSeparator(char c) { return c == ';' || c == ' ' || c == ',' || c =
 
 void CGameController::StartRound()
 {
+	if(m_ExpeditionPhase == LC_PHASE_MAP_GENERATING || m_ExpeditionPhase == LC_PHASE_DEPARTING || m_ExpeditionPhase == LC_PHASE_RETURNING)
+		return;
+
 	ResetGame();
 
 	m_RoundId = rand();
 	m_RoundStartTick = Server()->Tick();
 	m_GameOverTick = Server()->Tick() + 10000;
+	m_TimeWarningMask = 0;
+	m_LastBroadcastRemainingSec = -1;
+	m_ExpeditionPhase = LC_PHASE_EXPEDITION;
+	m_ReturnFinalized = false;
+	m_ExpeditionTimeBonusSec = GameServer()->m_NextExpeditionTimeBonusSec;
+	GameServer()->m_NextExpeditionTimeBonusSec = 0;
+	GameServer()->m_LastRoundBossBonus = 0;
+	LcResetRoundStats(GameServer());
 	GameServer()->m_World.m_Paused = false;
 	for (int i = 0; i < MAX_PLAYER; i++)
 	{
@@ -240,10 +345,19 @@ void CGameController::StartRound()
 		GameServer()->m_apPlayers[i]->ResetScraps();
 		GameServer()->m_apPlayers[i]->m_Hand = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
+		GameServer()->ApplyExpeditionBonuses(i);
 
 		Server()->GetClientSession(i)->m_RoundId = m_RoundId;
+		GameServer()->m_apPlayers[i]->m_LcExpeditionParticipant = true;
 	}
 	Server()->DemoRecorder_HandleAutoStart();
+
+	if(g_Config.m_GcRounds % GC_BOSS_ROUND_INTERVAL == 0)
+	{
+		const int BossType = rand() % NUM_MONSTER_TYPES;
+		GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_GAMEANNOUNCE, Server()->TickSpeed() * 2, _("【公司通知】本班次为头目轮次：{lstr:name}，设施内存在高威胁目标，请谨慎行动。"), "name", LcMonsterName(BossType));
+		GameServer()->NewMonster(BossType, true);
+	}
 }
 
 void CGameController::ChangeMap(const char *pToMap)
@@ -254,7 +368,104 @@ void CGameController::ChangeMap(const char *pToMap)
 
 void CGameController::CycleMap()
 {
+	// Map rotation is unused; expeditions use procedural map generation instead.
+}
 
+static int NextQuota(int Rounds)
+{
+	return BalanceNextQuota(Rounds);
+}
+
+// Called when the deadline is reached (gc_days == 0).
+static bool HandleQuotaDeadline(CGameContext *pGameServer, IServer *pServer)
+{
+	g_Config.m_GcDays = GC_STARTING_DAYS;
+	if(g_Config.m_GcMoney >= g_Config.m_GcQuota)
+	{
+		g_Config.m_GcRounds++;
+		g_Config.m_GcQuota = NextQuota(g_Config.m_GcRounds);
+		pGameServer->SendChatTarget(-1, _("【公司通知】指标已达成。合同续签，欢迎回来。"));
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(pGameServer->m_apPlayers[i])
+			{
+				LcSendQuotaCelebrationMotd(pGameServer, i);
+				LcGrantAchievement(pGameServer, i, LC_ACH_QUOTA_MET, _("【成就】{str:name} 达成「指标达标」"));
+			}
+		}
+		LcSaveCompanyStats(&pGameServer->m_CycleStats, pGameServer->m_aCareerStats);
+		return true;
+	}
+
+	pGameServer->SendChatTarget(-1, _("【公司通知】指标未达成。"));
+	pGameServer->SendChatTarget(-1, _("你们被解雇了。所有进度已重置。"));
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		if(pGameServer->m_apPlayers[i])
+			LcSendTerminationReviewMotd(pGameServer, i, &pGameServer->m_CycleStats);
+	SLcCycleStats EmptyCycle;
+	mem_zero(&EmptyCycle, sizeof(EmptyCycle));
+	LcSaveCompanyStats(&EmptyCycle, pGameServer->m_aCareerStats);
+	pGameServer->m_CycleStats = EmptyCycle;
+	g_Config.m_GcRounds = GC_STARTING_ROUNDS;
+	g_Config.m_GcQuota = GC_STARTING_QUOTA;
+	pServer->m_LocateGame = LOCATE_LOBBY;
+	return false;
+}
+
+static bool AnyPlayerLeftShip(CGameContext *pGameServer)
+{
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		CCharacter *pChr = pGameServer->GetPlayerChar(i);
+		if(pChr && !pChr->m_InShip)
+			return true;
+	}
+	return false;
+}
+
+static void TickExpeditionTimer(CGameController *pController, CGameContext *pGameServer, IServer *pServer)
+{
+	if(g_Config.m_SvTimelimit <= 0 || pServer->m_LocateGame != LOCATE_GAME || pController->m_ExpeditionPhase != LC_PHASE_EXPEDITION)
+		return;
+
+	if(!AnyPlayerLeftShip(pGameServer))
+		return;
+
+	int LimitTicks = (g_Config.m_SvTimelimit * 60 + pController->ExpeditionTimeBonusSec()) * pServer->TickSpeed();
+	int RemainingTicks = LimitTicks - (pServer->Tick() - pController->RoundStartTick());
+	int RemainingSec = max(0, RemainingTicks / pServer->TickSpeed());
+
+	const int aWarnings[] = {120, 60, 30, 10};
+	for(unsigned i = 0; i < sizeof(aWarnings)/sizeof(aWarnings[0]); i++)
+	{
+		if(RemainingSec <= aWarnings[i] && !(pController->m_TimeWarningMask & (1u << i)))
+		{
+			pController->m_TimeWarningMask |= (1u << i);
+			int WarnSec = aWarnings[i];
+			pGameServer->SendChatTarget(-1, _("[公司] 班次剩余 {int:sec} 秒 — 请返回着陆飞船"), "sec", &WarnSec);
+			pGameServer->CreateSoundGlobal(SOUND_WEAPON_NOAMMO, -1);
+			break;
+		}
+	}
+
+	if(RemainingSec <= 60 && RemainingSec > 0 && RemainingSec % 15 == 0)
+		pGameServer->CreateSoundGlobal(SOUND_WEAPON_NOAMMO, -1);
+
+	if(RemainingSec <= 120)
+	{
+		if(RemainingSec <= 10 && RemainingSec != pController->m_LastBroadcastRemainingSec && RemainingSec % 5 == 0)
+		{
+			pController->m_LastBroadcastRemainingSec = RemainingSec;
+			pGameServer->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, pServer->TickSpeed() * 2,
+				_("【班次】剩余 {int:sec} 秒 — 请返回飞船！"), "sec", &RemainingSec);
+		}
+		else if(RemainingSec > 10 && RemainingSec != pController->m_LastBroadcastRemainingSec && RemainingSec % 30 == 0)
+		{
+			pController->m_LastBroadcastRemainingSec = RemainingSec;
+			pGameServer->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, pServer->TickSpeed() * 2,
+				_("【班次】剩余 {int:sec} 秒"), "sec", &RemainingSec);
+		}
+	}
 }
 
 void CGameController::PostReset()
@@ -278,12 +489,23 @@ void CGameController::OnPlayerInfoChange(class CPlayer *pP)
 
 int CGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
-	pVictim->GetPlayer()->SetTeam(TEAM_SPECTATORS);
+	(void)pKiller;
+	(void)Weapon;
+	// Death is handled by CCharacter::Die() (freeze + drop scrap) in this mod.
+	(void)pVictim;
 	return 0;
 }
 
 void CGameController::OnCharacterSpawn(class CCharacter *pChr)
 {
+	if(Server()->m_LocateGame == LOCATE_GAME)
+	{
+		vec2 SafePos = pChr->m_Pos;
+		GetSafeSpawnNear(pChr->m_Pos, &SafePos, 640.0f);
+		pChr->m_Pos = SafePos;
+		pChr->m_Core.m_Pos = SafePos;
+	}
+
 	pChr->IncreaseHealth(10);
 	pChr->GiveWeapon(WEAPON_HAMMER, -1);
 }
@@ -322,7 +544,9 @@ void CGameController::TogglePause()
 
 bool CGameController::IsFriendlyFire(int ClientID1, int ClientID2)
 {
-	return true;
+	(void)ClientID1;
+	(void)ClientID2;
+	return false;
 }
 
 bool CGameController::IsForceBalanced()
@@ -343,15 +567,33 @@ bool CGameController::CanBeMovedOnBalance(int ClientID)
 
 void CGameController::Tick()
 {
-	if(!m_LaunchShip)
+	if(m_ExpeditionPhase == LC_PHASE_EXPEDITION)
 		m_GameOverTick = Server()->Tick() + 1;
 	
-	if(Server()->m_LocateGame == LOCATE_LOBBY && m_LaunchShip)
+	if(Server()->m_LocateGame == LOCATE_LOBBY && m_ExpeditionPhase == LC_PHASE_MAP_GENERATING)
 	{
 		m_GameOverTick = Server()->Tick() + 100;
-		if(Server()->m_MapGenerated)
+		if(GameServer()->m_MapGenFailed)
 		{
+			GameServer()->m_MapGenFailed = false;
+			if(GameServer()->m_MapGenRetryLeft > 0)
+			{
+				GameServer()->m_MapGenRetryLeft--;
+				GameServer()->SendChatTarget(-1, _("地图生成失败，正在自动重试…"));
+				GameServer()->GenTheMap();
+			}
+			else
+			{
+				m_ExpeditionPhase = LC_PHASE_LOBBY_IDLE;
+				g_Config.m_GcDays++;
+				GameServer()->SendChatTarget(-1, _("地图生成失败，远征已取消"));
+			}
+		}
+		else if(Server()->m_MapGenerated)
+		{
+			m_ExpeditionPhase = LC_PHASE_DEPARTING;
 			m_ReloadTick = 100;
+			m_FacilityMarkersBuilt = false;
 			GameServer()->SendChatTarget(-1 ,_("地图生成完毕！飞船即将起飞..."));
 			GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE);
 			Server()->m_LocateGame = LOCATE_GAME;
@@ -360,113 +602,162 @@ void CGameController::Tick()
 
 	if(m_ReloadTick > 0)
 	{
-		m_ReloadTick--; // c = 1, c--
-		if(m_ReloadTick == 0) // c == 0
+		m_ReloadTick--;
+		if(m_ReloadTick == 0)
 		{
-			GameServer()->Console()->ExecuteLine("reload", -1);;
-			m_ReloadTick--; // c == -1, c > 0(false), c == 0(false)
+			GameServer()->Console()->ExecuteLine("reload", -1);
+			m_ReloadTick--;
 		}
 	}
 
-	if(Server()->m_LocateGame == LOCATE_LOBBY && !m_LaunchShip)
+	if(Server()->m_LocateGame == LOCATE_GAME && !m_FacilityMarkersBuilt && m_ReloadTick < 0)
 	{
-		if(
-			// Time end.
-			(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)
-			|| 
-			// Vote passed.
-			(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart())
-		)
+		GameServer()->BuildFacilityMarkers();
+		m_FacilityMarkersBuilt = true;
+	}
+
+	if(Server()->m_LocateGame == LOCATE_LOBBY && m_ExpeditionPhase == LC_PHASE_LOBBY_IDLE)
+	{
+		if(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart())
 		{
-			bool Game = false;
 			GameServer()->m_VoteStart = 0;
-			if(!g_Config.m_GcDays)
+			bool StartExpedition = false;
+			if(g_Config.m_GcDays > 0)
 			{
-				g_Config.m_GcDays = 3;
-				if(g_Config.m_GcMoney >= g_Config.m_GcQuota)
-				{
-					g_Config.m_GcDays = 3;
-					g_Config.m_GcRounds++;
-					g_Config.m_GcQuota = g_Config.m_GcRounds*300+20*g_Config.m_GcRounds;
-					GameServer()->SendChatTarget(-1, _("你们没有被解雇，你们会继续在这里工作."));
-					Game = true;
-				}
-				else
-				{
-					GameServer()->SendChatTarget(-1, _("你们没能达成指标..."));
-					GameServer()->SendChatTarget(-1, _("你们被解雇了."));
-					g_Config.m_GcDays = 3;
-					g_Config.m_GcRounds = 1;
-					g_Config.m_GcQuota = 300;
-					Server()->m_LocateGame = LOCATE_LOBBY;
-					m_ReloadTick = 150;
-					Game = false;
-				}
+				g_Config.m_GcDays--;
+				StartExpedition = true;
 			}
 			else
 			{
-				Game = true;
-				g_Config.m_GcDays--;
+				StartExpedition = HandleQuotaDeadline(GameServer(), Server());
 			}
-			if(Game)
+
+			if(StartExpedition)
 			{
+				m_PrepareTick = 0;
+				LcApplyMoon(g_Config.m_GcMoon);
+				GameServer()->m_MapGenRetryLeft = 1;
+				GameServer()->m_MapGenLoadingBroadcastTick = 0;
+				GameServer()->SendChatTarget(-1, _("正在前往 {lstr:moon} ..."), "moon", LcMoonName(g_Config.m_GcMoon));
+				GameServer()->SendChatTarget(-1, _("设施地图生成中，请稍候…"));
 				GameServer()->GenTheMap();
-				GameServer()->SendChatTarget(-1, _("游戏地图生成中..."));
-				m_LaunchShip = true;
+				GameServer()->SendChatTarget(-1, _("设施地图生成中..."));
+				m_ExpeditionPhase = LC_PHASE_MAP_GENERATING;
+			}
+			else
+			{
+				m_ReloadTick = 150;
 			}
 
 		}
-		GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你现在在：飞船\n在投票界面进行游戏选择"));
+		if(Server()->Tick() - m_LastLobbyBroadcastTick >= Server()->TickSpeed() * 5)
+		{
+			m_LastLobbyBroadcastTick = Server()->Tick();
+			GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你现在在：飞船\n在投票界面进行游戏选择"));
+		}
 		return;
 	}
 
 	if(Server()->m_LocateGame == LOCATE_GAME)
 	{
-		if(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart() && GameServer()->m_CountInGame > 0 && !m_LaunchShip)
-		{
-			m_GameOverTick = Server()->Tick() + 100;
-			EndRound();
-		}
+		TickExpeditionTimer(this, GameServer(), Server());
 
-		if(Server()->Tick() - m_GameOverTick >= 0 && m_LaunchShip)
+		if(m_ExpeditionPhase == LC_PHASE_RETURNING)
 		{
-			if(m_EndRound2)
+			if(!m_ReturnFinalized)
+			{
+				int DoorRemaining = maximum(0, (int)((m_GameOverTick - Server()->Tick()) / Server()->TickSpeed()));
+				if(DoorRemaining > 0)
+				{
+					if(DoorRemaining != m_LastReturnDoorBroadcastSec)
+					{
+						m_LastReturnDoorBroadcastSec = DoorRemaining;
+						GameServer()->SendBroadcast(-1, BROADCAST_PRIORITY_GAMEANNOUNCE, Server()->TickSpeed(),
+							_("【舱门关闭】{int:sec} 秒"), "sec", &DoorRemaining);
+						for(int i = 0; i < MAX_CLIENTS; i++)
+						{
+							CCharacter *pChr = GameServer()->GetPlayerChar(i);
+							if(pChr && !pChr->m_InShip)
+								GameServer()->SendBroadcast(i, BROADCAST_PRIORITY_GAMEANNOUNCE, Server()->TickSpeed() * 2, _("警告：你尚未登船，舱门关闭后将被抛弃！"));
+						}
+					}
+				}
+				else if(Server()->Tick() >= m_GameOverTick)
+				{
+					m_ReturnFinalized = true;
+					m_GameOverTick = Server()->Tick() + 500;
+					GameServer()->SendChatTarget(-1, _("本轮已结束！"));
+					int Penalty = 0;
+					int Abandoned = 0;
+					for (int i = 0; i < MAX_CLIENTS; i++)
+					{
+						if(!GameServer()->GetPlayerChar(i))
+							continue;
+
+						CPlayer *pP = GameServer()->m_apPlayers[i];
+						if(!pP->GetCharacter()->m_InShip)
+						{
+							int LostValue = pP->GetBackpackValue();
+							if(LostValue > 0)
+								GameServer()->SendChatTarget(-1, _("##{str:name} 被抛弃了! 遗失废品价值 {int:value}元"), "name", Server()->ClientName(i), "value", &LostValue);
+							else
+								GameServer()->SendChatTarget(-1, _("##{str:name} 被抛弃了!"), "name", Server()->ClientName(i));
+							Penalty += LostValue;
+							Abandoned++;
+							pP->ResetScraps();
+						}
+
+						Server()->GetClientSession(i)->m_Freeze = false;
+					}
+					m_LastRoundPenalty = 0;
+					if(Penalty > 0 && g_Config.m_GcMoney > 0)
+					{
+						int Sub = min(Penalty, g_Config.m_GcMoney);
+						m_LastRoundPenalty = Sub;
+						GameServer()->SendChatTarget(-1, _("##因队员被抛弃，公司扣除 {int:money}元"), "money", &Sub);
+						g_Config.m_GcMoney -= Sub;
+					}
+					GameServer()->m_CycleStats.m_RoundsCompleted++;
+					GameServer()->m_CycleStats.m_TotalRecovered += m_LastRoundShipValue;
+					GameServer()->m_CycleStats.m_TotalPenalty += m_LastRoundPenalty;
+					GameServer()->m_CycleStats.m_AbandonedTimes += Abandoned;
+
+					GameServer()->SendChatTarget(-1, _("=== 本轮结算 ==="));
+					if(GameServer()->m_LastMapGenSeed > 0)
+					{
+						int Seed = GameServer()->m_LastMapGenSeed;
+						GameServer()->SendChatTarget(-1, _("本局地图种子: {int:seed}"), "seed", &Seed);
+					}
+					GameServer()->SendChatTarget(-1, _("飞船回收: {int:value}元 | 抛弃罚金: {int:penalty}元 | 公司余额: {int:money}元"), "value", &m_LastRoundShipValue, "penalty", &m_LastRoundPenalty, "money", &g_Config.m_GcMoney);
+					LcAddSettlementMvp(GameServer());
+					for(int i = 0; i < MAX_CLIENTS; i++)
+					{
+						if(!GameServer()->m_apPlayers[i])
+							continue;
+						LcUpdateCareerFromRound(GameServer(), i, &GameServer()->m_aRoundStats[i]);
+						LcSendSettlementMotd(GameServer(), i, m_LastRoundShipValue, m_LastRoundPenalty, GameServer()->m_LastRoundBossBonus);
+						if(Abandoned == 0)
+							LcGrantAchievement(GameServer(), i, LC_ACH_CLEAN_RETURN, _("【成就】{str:name} 达成「零抛弃返航」"));
+					}
+					char aChart[128];
+					LcFormatCycleChart(aChart, sizeof(aChart), GameServer()->m_CycleStats.m_RoundsCompleted, GameServer()->m_CycleStats.m_TotalRecovered, g_Config.m_GcQuota, g_Config.m_GcMoney);
+					GameServer()->SendChatTarget(-1, aChart);
+					LcSaveCompanyStats(&GameServer()->m_CycleStats, GameServer()->m_aCareerStats);
+					LcPlayUiSound(GameServer(), SOUND_CTF_CAPTURE, -1);
+					GameServer()->SendChatTarget(-1, _("$$你们将在数秒内回到飞船"));
+				}
+			}
+			else if(Server()->Tick() - m_GameOverTick >= 0)
 			{
 				Server()->m_LocateGame = LOCATE_LOBBY;
 				str_copy(g_Config.m_SvMap, g_Config.m_SvMapLobby, sizeof(g_Config.m_SvMap));
 				GameServer()->Console()->ExecuteLine("reload", -1);
 			}
-			else
-			{
-				m_EndRound2 = true;
-				m_GameOverTick = Server()->Tick() + 500;
-				GameServer()->SendChatTarget(-1, _("本轮已结束！"));
-				int Count = 0;
-				for (int i = 0; i < MAX_CLIENTS; i++)
-				{
-					if(!GameServer()->GetPlayerChar(i))
-						continue;
-	
-					if(!GameServer()->m_apPlayers[i]->GetCharacter()->m_InShip)
-					{
-						Count++;
-						GameServer()->SendChatTarget(-1, _("##{str:name} 被抛弃了!"), "name", Server()->ClientName(i));
-					}
-
-					Server()->GetClientSession(i)->m_Freeze = false;
-				}
-				if(Count > 0 && g_Config.m_GcMoney > 0)
-				{
-					int Sub = g_Config.m_GcMoney - (g_Config.m_GcMoney / clamp(Count, 1, g_Config.m_GcMoney + 1));
-					GameServer()->SendChatTarget(-1, _("##扣除{int:money}元"), "money", &Sub);
-					g_Config.m_GcMoney -= Sub;
-				}
-				GameServer()->SendChatTarget(-1, _("$$你们将在数秒内回到飞船"));
-			}
 		}
 	}
 
-	if(m_PrepareTick > 0)
+	if(m_PrepareTick > 0 && Server()->m_LocateGame == LOCATE_GAME &&
+		m_ExpeditionPhase != LC_PHASE_MAP_GENERATING && m_ExpeditionPhase != LC_PHASE_DEPARTING && m_ExpeditionPhase != LC_PHASE_RETURNING)
 	{
 		m_RoundStartTick = Server()->Tick();
 		m_PrepareTick--; // c = 1, c--
@@ -580,9 +871,13 @@ bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam)
 
 void CGameController::DoWincheck()
 {
-	// check win
-	if (g_Config.m_SvTimelimit > 0 && 
-	(Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60 || GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart())
+	if(Server()->m_LocateGame != LOCATE_GAME || m_ExpeditionPhase != LC_PHASE_EXPEDITION)
+		return;
+
+	if(GameServer()->m_VoteStart >= GameServer()->GetNeedVoteStart() && GameServer()->m_CountInGame > 0)
+		EndRound();
+	else if(g_Config.m_SvTimelimit > 0 &&
+		(Server()->Tick()-m_RoundStartTick) >= (g_Config.m_SvTimelimit*Server()->TickSpeed()*60 + m_ExpeditionTimeBonusSec*Server()->TickSpeed()))
 		EndRound();
 }
 

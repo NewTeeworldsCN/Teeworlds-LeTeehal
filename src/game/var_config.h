@@ -113,6 +113,7 @@ MACRO_CONFIG_INT(SvMapGen, sv_mapgen, 1, 0, 1, CFGFLAG_SERVER, "Map Generation S
 MACRO_CONFIG_INT(SvMapGenLevel, sv_mapgen_level, 1, 1, 9999, CFGFLAG_SERVER, "Map Difficulty")
 MACRO_CONFIG_INT(SvMapGenSeed, sv_mapgen_seed, 0, 0, 32767, CFGFLAG_SERVER, "Map generation seed")
 MACRO_CONFIG_INT(SvMapGenRandSeed, sv_mapgen_random_seed, 1, 0, 1, CFGFLAG_SERVER, "Random map generation seed")
+MACRO_CONFIG_STR(SvMapgenTheme, sv_mapgen_theme, 32, "metal_main", CFGFLAG_SERVER, "Mapgen automapper rules (mapgen/<name>.rules)")
 
 
 // server
@@ -153,10 +154,11 @@ MACRO_CONFIG_INT(SvLessPlayerStart, sv_less_players_start, 2, 1, MAX_PLAYER, CFG
 MACRO_CONFIG_INT(DbgFocus, dbg_focus, 0, 0, 1, CFGFLAG_CLIENT, "")
 MACRO_CONFIG_INT(DbgTuning, dbg_tuning, 0, 0, 1, CFGFLAG_CLIENT, "")
 
-MACRO_CONFIG_INT(GcQuota, gc_quota, 300, 0, 1000000000, CFGFLAG_SERVER, "")
-MACRO_CONFIG_INT(GcMoney, gc_money, 0, 0, 1000000000, CFGFLAG_SERVER, "")
-MACRO_CONFIG_INT(GcDays, gc_days, 3, 0, 1000000000, CFGFLAG_SERVER, "")
-MACRO_CONFIG_INT(GcRounds, gc_rounds, 1, 1, 1000000000, CFGFLAG_SERVER, "")
+MACRO_CONFIG_INT(GcQuota, gc_quota, 300, 0, 1000000000, CFGFLAG_SERVER, "Quota target (see game_balance.h)")
+MACRO_CONFIG_INT(GcMoney, gc_money, 0, 0, 1000000000, CFGFLAG_SERVER, "Collected money")
+MACRO_CONFIG_INT(GcDays, gc_days, 3, 0, 1000000000, CFGFLAG_SERVER, "Days left (see game_balance.h)")
+MACRO_CONFIG_INT(GcRounds, gc_rounds, 1, 1, 1000000000, CFGFLAG_SERVER, "Current round (see game_balance.h)")
+MACRO_CONFIG_INT(GcMoon, gc_moon, 1, 0, 4, CFGFLAG_SERVER, "Selected moon/route (0=Experimentation .. 4=Titan)")
 
 MACRO_CONFIG_INT(SvServerInfoPerSecond, sv_server_info_per_second, 10, 1, 1000, CFGFLAG_SERVER, "Maximum number of complete server info responses that are sent out per second")
 

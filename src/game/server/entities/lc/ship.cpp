@@ -1,7 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <game/generated/protocol.h>
-#include <game/server/gamecontext.h>
+#include <game/server/core/gamecontext.h>
+#include <game/server/lc/ui/gameplay_ui.h>
 #include <engine/shared/config.h>
 
 #include "ship.h"
@@ -50,6 +51,7 @@ void CShip::Tick()
             {
                 GameServer()->SendBroadcast(pChr->GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_GAMEANNOUNCE, _("你现在在飞船里了，打开投票界面查看更多"));
                 pChr->m_InShip = true;
+                LcPlayUiSound(GameServer(), SOUND_WEAPON_SWITCH, pChr->GetPlayer()->GetCID());
                 GameServer()->ResetVotes(pChr->GetPlayer()->GetCID());
             }
             pChr->m_InShip = true;
@@ -72,11 +74,16 @@ void CShip::Tick()
     }
 }
 
-void CShip::UpdateValue()
+bool CShip::Contains(vec2 Pos) const
+{
+    return distancebox(vec2((float)m_Radius, (float)m_Radius), Pos, m_Pos);
+}
+
+void CShip::RecalculateValue()
 {
     m_Value = 0;
     m_Num = 0;
-    for (CScrap *pScrap = (CScrap *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pScrap; pScrap = (CScrap *)pScrap->TypeNext())
+    for(CScrap *pScrap = (CScrap *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_SCRAP); pScrap; pScrap = (CScrap *)pScrap->TypeNext())
     {
         if(!pScrap->GetInShip())
             continue;
@@ -84,6 +91,11 @@ void CShip::UpdateValue()
         m_Value += pScrap->GetScrapValue();
         m_Num++;
     }
+}
+
+void CShip::UpdateValue()
+{
+    RecalculateValue();
     GameServer()->ResetVotes(-1);
 }
 

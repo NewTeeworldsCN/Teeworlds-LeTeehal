@@ -1,8 +1,9 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <game/generated/protocol.h>
-#include <game/server/gamecontext.h>
+#include <game/server/core/gamecontext.h>
 #include "laser.h"
+#include "../lc/monster.h"
 
 CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEnergy, int Owner)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_LASER)
@@ -18,19 +19,46 @@ CLaser::CLaser(CGameWorld *pGameWorld, vec2 Pos, vec2 Direction, float StartEner
 }
 
 
-bool CLaser::HitCharacter(vec2 From, vec2 To)
+bool CLaser::HitTarget(vec2 From, vec2 To)
 {
-	vec2 At;
+	vec2 CharAt;
 	CCharacter *pOwnerChar = GameServer()->GetPlayerChar(m_Owner);
-	CCharacter *pHit = GameServer()->m_World.IntersectCharacter(m_Pos, To, 0.f, At, pOwnerChar);
-	if(!pHit)
-		return false;
+	CCharacter *pChar = GameServer()->m_World.IntersectCharacter(m_Pos, To, 0.f, CharAt, pOwnerChar);
 
-	m_From = From;
-	m_Pos = At;
-	m_Energy = -1;
-	pHit->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
-	return true;
+	vec2 MonAt;
+	CMonster *pMon = GameServer()->m_World.IntersectMonster(m_Pos, To, 0.f, MonAt);
+	if(pMon && !GameServer()->PlayerCanDamageMonster(pMon))
+		pMon = 0;
+
+	bool HitChar = pChar != 0;
+	bool HitMon = pMon != 0;
+	if(HitChar && HitMon)
+	{
+		if(distance(m_Pos, CharAt) <= distance(m_Pos, MonAt))
+			HitMon = false;
+		else
+			HitChar = false;
+	}
+
+	if(HitChar)
+	{
+		m_From = From;
+		m_Pos = CharAt;
+		m_Energy = -1;
+		pChar->TakeDamage(vec2(0.f, 0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_RIFLE);
+		return true;
+	}
+
+	if(HitMon)
+	{
+		m_From = From;
+		m_Pos = MonAt;
+		m_Energy = -1;
+		GameServer()->DamageMonsterFromPlayer(pMon, m_Owner, WEAPON_RIFLE, (int)GameServer()->Tuning()->m_LaserDamage, vec2(0.f, 0.f));
+		return true;
+	}
+
+	return false;
 }
 
 void CLaser::DoBounce()
@@ -47,7 +75,7 @@ void CLaser::DoBounce()
 
 	if(GameServer()->Collision()->IntersectLine(m_Pos, To, 0x0, &To))
 	{
-		if(!HitCharacter(m_Pos, To))
+		if(!HitTarget(m_Pos, To))
 		{
 			// intersected
 			m_From = m_Pos;
@@ -71,7 +99,7 @@ void CLaser::DoBounce()
 	}
 	else
 	{
-		if(!HitCharacter(m_Pos, To))
+		if(!HitTarget(m_Pos, To))
 		{
 			m_From = m_Pos;
 			m_Pos = To;

@@ -4,9 +4,9 @@
 #define GAME_SERVER_PLAYER_H
 
 // this include should perhaps be removed
-#include "entities/character.h"
+#include "../entities/core/character.h"
 #include "gamecontext.h"
-#include "scrap-info.h"
+#include "../scrap/scrap_info.h"
 
 // player object
 class CPlayer
@@ -33,7 +33,7 @@ public:
 	void OnPredictedInput(CNetObj_PlayerInput *NewInput);
 	void OnDisconnect(const char *pReason);
 
-	void KillCharacter(int Weapon = WEAPON_GAME);
+	void KillCharacter(int Weapon = WEAPON_GAME, bool DropScrap = true);
 	CCharacter *GetCharacter();
 
 	const char* GetLanguage();
@@ -106,6 +106,8 @@ public:
 	array<Scrap *> m_vScraps;
 	void ResetScraps();
 	void EraseScrap(int ID);
+	int GetBackpackValue() const;
+	int GetBackpackWeight() const;
 
 	int m_Weight;
 
@@ -115,10 +117,28 @@ public:
 	void HandleTuningParams();
 
 	int m_Hand;
+	int m_ScrapValueBonusPercent;
 	void DropAllScrap(vec2 Pos, bool InShip);
 
 	bool m_VoteStarted;
 	int m_AddedWeight;
+
+	bool m_TerminalMenuOpen;
+	int m_TerminalMenuToggleTick;
+	int m_TerminalMenuSelection;
+	int m_TerminalMenuTextScroll;
+	int m_TerminalMenuPage;
+	bool m_TerminalMenuInputWarmup;
+	bool m_TerminalMenuFireBlock;
+	CNetObj_PlayerInput m_TerminalMenuPrevInput;
+	int m_LastMenuVoteKey;
+	int m_TerminalMenuMotdTick;
+	int m_TerminalMenuIgnoreHookUntilTick;
+
+	bool m_LcOnboarded;
+	bool m_LcExpeditionParticipant;
+	bool m_TerminalWelcomePending;
+	char m_aTerminalMotd[1200];
 
 private:
 	CCharacter *m_pCharacter;

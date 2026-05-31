@@ -2,6 +2,9 @@
 #include <base/math.h>
 #include <engine/shared/config.h>
 
+#include <game/server/lc/mapgen/mapgen_random.h>
+#include <game/server/lc/mapgen/mapgen_theme.h>
+
 #include "gen_layer.h"
 
 CGenLayer::CGenLayer(int w, int h)
@@ -124,14 +127,14 @@ void CGenLayer::CleanTiles()
 		m_pFlags[i] = 0;
 }
 
-void CGenLayer::GenerateBoxes()
+void CGenLayer::GenerateBoxes(int MaxBoxes)
 {
-	int n = 3 + rand() % 12;
+	int n = MaxBoxes > 0 ? MaxBoxes : 3 + MapGenRand() % 12;
 
 	for (int k = 0; k < 5000; k++)
 	{
-		int wx = 10 + rand() % (m_Width - 20);
-		int wy = 10 + rand() % (m_Height - 20);
+		int wx = 10 + MapGenRand() % (m_Width - 20);
+		int wy = 10 + MapGenRand() % (m_Height - 20);
 
 		int i = 100;
 
@@ -145,8 +148,8 @@ void CGenLayer::GenerateBoxes()
 
 		while (i-- > 0 && n > 0)
 		{
-			int x = wx + rand() % 20 - rand() % 20;
-			int y = wy + rand() % 20 - rand() % 20;
+			int x = wx + MapGenRand() % 20 - MapGenRand() % 20;
+			int y = wy + MapGenRand() % 20 - MapGenRand() % 20;
 
 			int l = 5;
 			// to the floor
@@ -158,7 +161,7 @@ void CGenLayer::GenerateBoxes()
 			int s = 2;
 			int p = 44;
 
-			if (b < n + 3 || frandom() < 0.5f)
+			if (b < n + 3 || MapGenRandomFloat() < 0.5f)
 			{
 				s = 3;
 				p = 25;
@@ -199,7 +202,7 @@ void CGenLayer::GenerateBoxes()
 
 				bool Flip = false;
 
-				if (frandom() < 0.5f)
+				if (MapGenRandomFloat() < 0.5f)
 					Flip = !Flip;
 
 				// for (int xx = 0; xx < ts.x; xx++)
@@ -225,18 +228,18 @@ void CGenLayer::GeneratePlatforms()
 	// Dont do it.
 	return;
 
-	int n = 3 + rand() % 12;
+	int n = 3 + MapGenRand() % 12;
 
 	for (int k = 0; k < Size() / 16; k++)
 	{
-		int x = 10 + rand() % (m_Width - 20);
-		int y = 10 + rand() % (m_Height - 20);
+		int x = 10 + MapGenRand() % (m_Width - 20);
+		int y = 10 + MapGenRand() % (m_Height - 20);
 
 		if (Used(x, y))
 			continue;
 
 		int Dir = 1;
-		if (frandom() < 0.5f)
+		if (MapGenRandomFloat() < 0.5f)
 			Dir = -1;
 
 		while (!Get(x - Dir, y))
@@ -284,7 +287,7 @@ void CGenLayer::GeneratePlatforms()
 			break;
 			*/
 
-			if ((Create && l > 1) || l > 3 + rand() % 25)
+			if ((Create && l > 1) || l > 3 + MapGenRand() % 25)
 			{
 				Set(14 * 16 + 1, x, y, Dir == 1 ? 0 : 1, FGOBJECTS); // TILEFLAG_VFLIP
 
@@ -321,8 +324,8 @@ bool CGenLayer::AddBackgroundTile(int x, int y)
 
 void CGenLayer::GenerateMoreForeground()
 {
-	float a1 = 0.02f + frandom() * 0.01f;
-	float a2 = 0.02f + frandom() * 0.01f;
+	float a1 = 0.02f + MapGenRandomFloat() * 0.01f;
+	float a2 = 0.02f + MapGenRandomFloat() * 0.01f;
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -361,12 +364,15 @@ void CGenLayer::GenerateMoreBackground()
 
 void CGenLayer::GenerateBackground()
 {
+	const SLcMapgenThemeProfile *pTheme = LcGetMapgenThemeProfile(g_Config.m_SvMapgenTheme);
+	const int BgTile = pTheme ? pTheme->m_BackgroundTile : 1;
+
 	// clone foreground
 	for (int x = 0; x < m_Width; x++)
 		for (int y = 0; y < m_Height; y++)
 		{
-			if (Get(x, y)) // && frandom() < 0.5f)
-				Set(1, x, y, 0, BACKGROUND);
+			if (Get(x, y))
+				Set(BgTile, x, y, 0, BACKGROUND);
 			else
 				Set(0, x, y, 0, BACKGROUND);
 		}
@@ -374,9 +380,12 @@ void CGenLayer::GenerateBackground()
 
 void CGenLayer::GenerateFences()
 {
+	const SLcMapgenThemeProfile *pTheme = LcGetMapgenThemeProfile(g_Config.m_SvMapgenTheme);
+	const float SkipChance = pTheme ? pTheme->m_FenceSkipChance : 0.75f;
+
 	for (int x = 4; x < m_Width - 4; x++)
 	{
-		if (frandom() < 0.75f)
+		if (MapGenRandomFloat() < SkipChance)
 			continue;
 
 		for (int y = 4; y < m_Height - 4; y++)
@@ -408,7 +417,7 @@ void CGenLayer::GenerateFences()
 							if (Get(x + xx, y + yy, DOODADS) || Get(x + xx, y + yy, FGOBJECTS))
 								Valid = false;
 
-					if (frandom() < 0.75f)
+					if (MapGenRandomFloat() < 0.75f)
 						Valid = false;
 
 					// avoid door
@@ -425,7 +434,7 @@ void CGenLayer::GenerateFences()
 						{
 							int t = 10 * 16 + 11;
 
-							if (xx == x + (-x1 + x2) / 2 && frandom() < 0.25f)
+							if (xx == x + (-x1 + x2) / 2 && MapGenRandomFloat() < 0.25f)
 								t--;
 
 							Set(t - 16, xx, y - 1, 0, DOODADS);
@@ -456,8 +465,8 @@ void CGenLayer::GenerateAirPlatforms(int Num)
 
 	while (Num > 0 && i++ < 10000)
 	{
-		x = b + rand() % (m_Width - b * 2);
-		y = b + rand() % (m_Height - b * 2);
+		x = b + MapGenRand() % (m_Width - b * 2);
+		y = b + MapGenRand() % (m_Height - b * 2);
 
 		if (!Used(x, y) && (fabs(m_EndPos.x - x) > 10 || x + 10 < m_EndPos.y))
 		{
@@ -475,7 +484,7 @@ void CGenLayer::GenerateAirPlatforms(int Num)
 			if (Valid)
 			{
 				Num--;
-				int s = 3 + rand() % 3;
+				int s = 3 + MapGenRand() % 3;
 				for (int xx = -s; xx < s - 1; xx++)
 				{
 					Set(-1, x + xx, y - 1);
@@ -563,10 +572,10 @@ void CGenLayer::GenerateSlopes()
 			bool Valid = true;
 			bool Found = false;
 
-			if (Get(x, y) && frandom() < 0.5f)
+			if (Get(x, y) && MapGenRandomFloat() < 0.5f)
 			{
 				int s = 0;
-				int MaxSize = 70 + rand() % 8;
+				int MaxSize = 70 + MapGenRand() % 8;
 
 				for (int i = 0; i < MaxSize - 1; i++)
 				{
@@ -609,10 +618,10 @@ void CGenLayer::GenerateSlopes()
 					Found = true;
 			}
 
-			if (!Found && Get(x, y) && frandom() < 0.75f)
+			if (!Found && Get(x, y) && MapGenRandomFloat() < 0.75f)
 			{
 				int s = 0;
-				int MaxSize = 7 + rand() % 8;
+				int MaxSize = 7 + MapGenRand() % 8;
 
 				for (int i = 0; i < MaxSize - 1; i++)
 				{
@@ -659,10 +668,10 @@ void CGenLayer::GenerateSlopes()
 		{
 			bool Found = false;
 			bool Valid = true;
-			if (Get(x, y) && frandom() < 0.75f)
+			if (Get(x, y) && MapGenRandomFloat() < 0.75f)
 			{
 				int s = 0;
-				int MaxSize = 7 + rand() % 8;
+				int MaxSize = 7 + MapGenRand() % 8;
 
 				for (int i = 0; i < MaxSize - 1; i++)
 				{
@@ -705,10 +714,10 @@ void CGenLayer::GenerateSlopes()
 					Found = true;
 			}
 
-			if (!Found && Get(x, y) && frandom() < 0.75f)
+			if (!Found && Get(x, y) && MapGenRandomFloat() < 0.75f)
 			{
 				int s = 0;
-				int MaxSize = 7 + rand() % 8;
+				int MaxSize = 7 + MapGenRand() % 8;
 
 				for (int i = 0; i < MaxSize - 1; i++)
 				{
@@ -757,6 +766,31 @@ void CGenLayer::GenerateSlopes()
 						for (int yy = 0; yy < xx + s; yy++)
 							Set(-1, x + xx, y + yy);
 			}
+		}
+}
+
+void CGenLayer::GenerateSlopesLight()
+{
+	for (int x = 4; x < m_Width - 4; x += 4)
+		for (int y = 8; y < m_Height - 4; y += 4)
+		{
+			if (!Get(x, y) || MapGenRandomFloat() >= 0.12f)
+				continue;
+
+			bool Valid = true;
+			int s = 4 + MapGenRand() % 3;
+			for (int xx = x; xx < x + s; xx++)
+				if (!Get(xx, y) || Get(xx, y + 1))
+					Valid = false;
+			for (int yy = y - s; yy < y; yy++)
+				if (!Get(x, yy) || Get(x - 1, yy))
+					Valid = false;
+			if (!Valid)
+				continue;
+
+			for (int xx = 0; xx <= s; xx++)
+				for (int yy = 0; yy < xx; yy++)
+					Set(-1, x + s - xx, y - yy);
 		}
 }
 
@@ -1114,10 +1148,10 @@ ivec3 CGenLayer::GetLongPlatform()
 		return ivec3(0, 0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumLongPlatforms;
+	int i = MapGenRand() % m_NumLongPlatforms;
 
 	while (m_aLongPlatform[i].x == 0 && n++ < 9999)
-		i = rand() % m_NumLongPlatforms;
+		i = MapGenRand() % m_NumLongPlatforms;
 
 	if (n >= 9999)
 		return ivec3(0, 0, 0);
@@ -1141,10 +1175,10 @@ ivec2 CGenLayer::GetMedPlatform()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumMedPlatforms;
+	int i = MapGenRand() % m_NumMedPlatforms;
 
 	while (m_aMedPlatform[i].x == 0 && n++ < 999)
-		i = rand() % m_NumMedPlatforms;
+		i = MapGenRand() % m_NumMedPlatforms;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1161,10 +1195,10 @@ ivec2 CGenLayer::GetPlatform()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumPlatforms;
+	int i = MapGenRand() % m_NumPlatforms;
 
 	while (m_aPlatform[i].x == 0 && n++ < 999)
-		i = rand() % m_NumPlatforms;
+		i = MapGenRand() % m_NumPlatforms;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1261,10 +1295,10 @@ ivec2 CGenLayer::GetOpenArea()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumOpenAreas;
+	int i = MapGenRand() % m_NumOpenAreas;
 
 	while (m_aOpenArea[i].x == 0 && n++ < 999)
-		i = rand() % m_NumOpenAreas;
+		i = MapGenRand() % m_NumOpenAreas;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1281,10 +1315,10 @@ ivec3 CGenLayer::GetLongCeiling()
 		return ivec3(0, 0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumLongCeilings;
+	int i = MapGenRand() % m_NumLongCeilings;
 
 	while (m_aLongCeiling[i].x == 0 && n++ < 999)
-		i = rand() % m_NumLongCeilings;
+		i = MapGenRand() % m_NumLongCeilings;
 
 	if (n >= 9999)
 		return ivec3(0, 0, 0);
@@ -1309,10 +1343,10 @@ ivec2 CGenLayer::GetCeiling()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumCeilings;
+	int i = MapGenRand() % m_NumCeilings;
 
 	while (m_aCeiling[i].x == 0 && n++ < 999)
-		i = rand() % m_NumCeilings;
+		i = MapGenRand() % m_NumCeilings;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1369,10 +1403,10 @@ ivec2 CGenLayer::GetWall()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumWalls;
+	int i = MapGenRand() % m_NumWalls;
 
 	while (m_aWall[i].x == 0 && n++ < 999)
-		i = rand() % m_NumWalls;
+		i = MapGenRand() % m_NumWalls;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1389,11 +1423,11 @@ ivec4 CGenLayer::GetPit()
 		return ivec4(0, 0, 0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumPits;
+	int i = MapGenRand() % m_NumPits;
 
 	// try random
 	while (m_aPit[i].x == 0 && n++ < 99)
-		i = rand() % m_NumPits;
+		i = MapGenRand() % m_NumPits;
 
 	if (m_aPit[i].x == 0)
 	{
@@ -1421,10 +1455,10 @@ ivec2 CGenLayer::GetTopCorner()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumTopCorners;
+	int i = MapGenRand() % m_NumTopCorners;
 
 	while (m_aTopCorner[i].x == 0 && n++ < 999)
-		i = rand() % m_NumTopCorners;
+		i = MapGenRand() % m_NumTopCorners;
 
 	if (n >= 9999)
 		return ivec2(0, 0);
@@ -1441,10 +1475,10 @@ ivec2 CGenLayer::GetSharpCorner()
 		return ivec2(0, 0);
 
 	int n = 0;
-	int i = rand() % m_NumCorners;
+	int i = MapGenRand() % m_NumCorners;
 
 	while (m_aTopCorner[i].x == 0 && n++ < 999)
-		i = rand() % m_NumCorners;
+		i = MapGenRand() % m_NumCorners;
 
 	if (n >= 9999)
 		return ivec2(0, 0);

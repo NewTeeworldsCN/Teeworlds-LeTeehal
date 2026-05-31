@@ -2,13 +2,68 @@
 #include <base/math.h>
 #include <base/vmath.h>
 
+#include <game/server/lc/expedition/moons.h>
+
+#include <game/server/lc/mapgen/mapgen_random.h>
+
 #include "room.h"
 #include "gen_layer.h"
 
+static const int LC_ROOM_TILES = 6;
+
+static int RoomGridSize(int FacilityType)
+{
+	(void)FacilityType;
+	return LC_ROOM_TILES;
+}
+
+static int RoomMinLeaf(int FacilityType)
+{
+	if(FacilityType == LC_FACILITY_MINES)
+		return 5;
+	return LC_ROOM_TILES;
+}
+
+static int RoomTargetSize(int FacilityType)
+{
+	if(FacilityType == LC_FACILITY_MINES)
+		return 5;
+	return LC_ROOM_TILES;
+}
+
+static int GridAlign(int Value, int Grid)
+{
+	if(Grid < 2)
+		return Value;
+	return ((Value + Grid / 2) / Grid) * Grid;
+}
+
+static int GridSplit(int Size, int Grid, int MinLeaf)
+{
+	if(Size < MinLeaf * 2)
+		return 0;
+
+	int Half = Size / 2;
+	Half = GridAlign(Half, Grid);
+	if(Half < MinLeaf)
+		Half = MinLeaf;
+	if(Half > Size - MinLeaf)
+		Half = Size - MinLeaf;
+	if(Half <= 0 || Half >= Size)
+		return 0;
+	return Half;
+}
+
+static bool CanSplit(int Size, int FacilityType)
+{
+	return Size >= RoomMinLeaf(FacilityType) * 2;
+}
+
 // bsp map, acts as template for rooms
-CRoom::CRoom(int x, int y, int w, int h)
+CRoom::CRoom(int x, int y, int w, int h, int FacilityType)
 {
 	m_Open = false;
+	m_FacilityType = FacilityType;
 	
 	m_X = x;
 	m_Y = y;
@@ -18,23 +73,20 @@ CRoom::CRoom(int x, int y, int w, int h)
 	m_pChild1 = NULL;
 	m_pChild2 = NULL;
 	
-	int i = 0;
-	
-	//int RoomSize = 6+rand()%10;
-	int RoomSize = 4+rand()%2;
+	int RoomSize = RoomTargetSize(FacilityType);
 	
 	if (m_H < m_W)
 	{
-		if (m_W > RoomSize+3)
+		if(CanSplit(m_W, FacilityType) && m_W > RoomSize)
 			Split(false);
-		if (m_H > RoomSize)
+		if(CanSplit(m_H, FacilityType) && m_H > RoomSize)
 			Split(true);
 	}
 	else
 	{
-		if (m_H > RoomSize)
+		if(CanSplit(m_H, FacilityType) && m_H > RoomSize)
 			Split(true);
-		if (m_W > RoomSize+3)
+		if(CanSplit(m_W, FacilityType) && m_W > RoomSize)
 			Split(false);
 	}
 }
@@ -51,36 +103,63 @@ void CRoom::Split(bool Vertical)
 {
 	if (TooSmall())
 		return;
+	if(m_pChild1 || m_pChild2)
+		return;
+
+	int Grid = RoomGridSize(m_FacilityType);
+	int MinLeaf = RoomMinLeaf(m_FacilityType);
 		
 	if (Vertical)
 	{
 		int h2 = m_H;
-		
-		if (m_W < 32)
-			m_H = 3 + rand()%(m_H-2);
+
+		if(LcFacilityUsesGridLayout((ELcFacilityType)m_FacilityType))
+			m_H = GridSplit(m_H, Grid, MinLeaf);
+		else if (m_H < 4)
+			return;
+		else if (m_W < 32)
+			m_H = 3 + MapGenRand()%(m_H-2);
 		else
-			m_H = m_H/(2 + rand()%2);
-		
-		if (!m_pChild1)
-			m_pChild1 = new CRoom(m_X, m_Y, m_W, m_H);
-		
-		if (!m_pChild2)
-			m_pChild2 = new CRoom(m_X, m_Y+m_H, m_W, h2-m_H);
+			m_H = m_H/(2 + MapGenRand()%2);
+
+		if(m_H <= MinLeaf || m_H >= h2 - MinLeaf)
+			return;
+
+		m_pChild1 = new CRoom(m_X, m_Y, m_W, m_H, m_FacilityType);
+		m_pChild2 = new CRoom(m_X, m_Y+m_H, m_W, h2-m_H, m_FacilityType);
+		if(!m_pChild1 || !m_pChild2)
+		{
+			delete m_pChild1;
+			delete m_pChild2;
+			m_pChild1 = 0;
+			m_pChild2 = 0;
+		}
 	}
 	else
 	{
 		int w2 = m_W;
-		
-		if (m_H < 32)
-			m_W = 3 + rand()%(m_W-2);
-		else
-			m_W = m_W/(2 + rand()%2);
 
-		if (!m_pChild1)
-			m_pChild1 = new CRoom(m_X, m_Y, m_W, m_H);
-		
-		if (!m_pChild2)
-			m_pChild2 = new CRoom(m_X+m_W, m_Y, w2-m_W, m_H);
+		if(LcFacilityUsesGridLayout((ELcFacilityType)m_FacilityType))
+			m_W = GridSplit(m_W, Grid, MinLeaf);
+		else if (m_W < 4)
+			return;
+		else if (m_H < 32)
+			m_W = 3 + MapGenRand()%(m_W-2);
+		else
+			m_W = m_W/(2 + MapGenRand()%2);
+
+		if(m_W <= MinLeaf || m_W >= w2 - MinLeaf)
+			return;
+
+		m_pChild1 = new CRoom(m_X, m_Y, m_W, m_H, m_FacilityType);
+		m_pChild2 = new CRoom(m_X+m_W, m_Y, w2-m_W, m_H, m_FacilityType);
+		if(!m_pChild1 || !m_pChild2)
+		{
+			delete m_pChild1;
+			delete m_pChild2;
+			m_pChild1 = 0;
+			m_pChild2 = 0;
+		}
 	}
 }
 
@@ -108,11 +187,32 @@ bool CRoom::Open(int x, int y)
 
 void CRoom::Generate(CGenLayer *pTiles)
 {
-	//if (TooSmall())
-	//	return;
-	
 	if (!m_pChild1 && m_Open)
-		Fill(pTiles, 0, m_X, m_Y, m_W, m_H);
+	{
+		int x = m_X;
+		int y = m_Y;
+		int w = m_W;
+		int h = m_H;
+
+		if(LcFacilityUsesGridLayout((ELcFacilityType)m_FacilityType))
+		{
+			int Grid = RoomGridSize(m_FacilityType);
+			x = GridAlign(m_X, Grid);
+			y = GridAlign(m_Y, Grid);
+			w = GridAlign(m_X + m_W, Grid) - x;
+			h = GridAlign(m_Y + m_H, Grid) - y;
+			if(w > LC_ROOM_TILES)
+				w = LC_ROOM_TILES;
+			if(h > LC_ROOM_TILES)
+				h = LC_ROOM_TILES;
+			if(w < Grid)
+				w = Grid;
+			if(h < Grid)
+				h = Grid;
+		}
+
+		Fill(pTiles, 0, x, y, w, h);
+	}
 	
 	if (m_pChild1)
 		m_pChild1->Generate(pTiles);
@@ -144,13 +244,10 @@ int CRoom::GetMaxDepth() const
     return std::max(CurrentDepth, ChildDepth);
 }
 
-// 在 CRoom 类中添加以下方法
 vec2 CRoom::GetFurthestPoint() const
 {
-    // 当前房间的最远点（右下角）
     vec2 current_furthest = vec2(m_X + m_W, m_Y + m_H);
 
-    // 递归检查子房间
     vec2 child_furthest = current_furthest;
     if (m_pChild1)
     {
@@ -165,7 +262,6 @@ vec2 CRoom::GetFurthestPoint() const
             child_furthest = child2_furthest;
     }
 
-    // 返回当前房间和子房间中最远的点
     return distance(current_furthest, vec2(0, 0)) > distance(child_furthest, vec2(0, 0)) 
            ? current_furthest 
            : child_furthest;

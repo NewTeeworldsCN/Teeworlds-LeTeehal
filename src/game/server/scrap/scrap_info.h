@@ -1,7 +1,7 @@
 #pragma once
 
-#include "entities/scrap.h"
-#include "gamecontext.h"
+#include "../entities/lc/scrap.h"
+#include "../core/gamecontext.h"
 #include <vector>
 #include <algorithm>
 
@@ -13,6 +13,8 @@ enum
     SCRAP_L1_PICKLES,        // 酸黄瓜
     SCRAP_L1_FISH,           // 塑料鱼
     SCRAP_L1_METALSHEET,     // 金属板
+    SCRAP_L1_SODA,           // 能量汽水
+    SCRAP_L1_WHISTLE,        // 驱虫哨
     END_SCRAP_L1,
 
     SCRAP_L2_TOY = END_SCRAP_L1, // 机器人玩具
@@ -21,6 +23,8 @@ enum
     SCRAP_L2_PILL,               // 药瓶
     SCRAP_L2_OLDPHONE,           // 老式电话
     SCRAP_L2_REMOTE,             // 遥控器
+    SCRAP_L2_MEDKIT,             // 急救包
+    SCRAP_L2_MEGAPHONE,          // 扩音器
     END_SCRAP_L2,
 
     SCRAP_L3_MAGIC7BALL = END_SCRAP_L2, // 魔法7号球
@@ -29,6 +33,8 @@ enum
     SCRAP_L3_LAMP,                      // 绚丽台灯
     SCRAP_L3_CASHREGISTER,              // 收银机
     SCRAP_L3_TEETH,                     // 假牙
+    SCRAP_L3_LUCKYCAT,                  // 招财猫
+    SCRAP_L3_BOOMBOX,                   // 音响
     END_SCRAP_L3,
 
     NUM_SCRAPS = END_SCRAP_L3,
@@ -67,6 +73,8 @@ public:
     void RegisterScrap(const char aName[64], int ScrapID, ivec2 Value, ivec2 Weight, FCallbackScrap pData);
 
     const char *GetScrapName(int Scrap);
+    const char *GetScrapDesc(int Scrap);
+    const char *GetScrapDescShort(int Scrap);
 
     void RandomScrap(int ScrapID, int &Value, int &Weight);
     void Call(int ScrapID, int ScrapType, int ClientID);
@@ -80,6 +88,8 @@ public:
     static void LCPickles(int ClientID, int ScrapID, void *pUser);
     static void LCFish(int ClientID, int ScrapID, void *pUser);
     static void LCMetalsheet(int ClientID, int ScrapID, void *pUser);
+    static void LCSoda(int ClientID, int ScrapID, void *pUser);
+    static void LCWhistle(int ClientID, int ScrapID, void *pUser);
     
     static void LCToy(int ClientID, int ScrapID, void *pUser);
     static void LCCube(int ClientID, int ScrapID, void *pUser);
@@ -87,6 +97,8 @@ public:
     static void LCPill(int ClientID, int ScrapID, void *pUser);
     static void LCOldphone(int ClientID, int ScrapID, void *pUser);
     static void LCRemote(int ClientID, int ScrapID, void *pUser);
+    static void LCMedkit(int ClientID, int ScrapID, void *pUser);
+    static void LCMegaphone(int ClientID, int ScrapID, void *pUser);
     
     static void LCMagic7ball(int ClientID, int ScrapID, void *pUser);
     static void LCShotgun(int ClientID, int ScrapID, void *pUser);
@@ -94,6 +106,8 @@ public:
     static void LCLamp(int ClientID, int ScrapID, void *pUser);
     static void LCCashRegister(int ClientID, int ScrapID, void *pUser);
     static void LCTeeth(int ClientID, int ScrapID, void *pUser);
+    static void LCLuckycat(int ClientID, int ScrapID, void *pUser);
+    static void LCBoombox(int ClientID, int ScrapID, void *pUser);
 
 private:
     class CGameContext *m_pGameServer;

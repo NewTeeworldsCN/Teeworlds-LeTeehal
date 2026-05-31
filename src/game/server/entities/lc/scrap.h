@@ -1,6 +1,6 @@
 #pragma once
 
-#include <game/server/entity.h>
+#include <game/server/core/entity.h>
 
 class CScrap : public CEntity
 {
@@ -20,11 +20,13 @@ public:
     virtual void Snap(int SnappingClient);
 
     bool Pickup(int ClientID);
+    void ExportScrap(struct Scrap &Out) const;
     
     inline int GetScrapValue() { return m_ScrapValue; }
     inline int GetScrapType() { return m_ScrapType; }
     inline int GetWeight() { return m_Weight; }
     inline bool GetInShip() { return m_InShip; }
+    void MergeStats(int Value, int Weight);
     bool m_Hide;
 
 private:

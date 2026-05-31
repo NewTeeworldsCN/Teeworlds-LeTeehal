@@ -17,13 +17,20 @@
 #include "gameworld.h"
 #include "player.h"
 
-#include "scrap-info.h"
+#include "../scrap/scrap_info.h"
+#include "../lc/expedition/balance.h"
 
 #include <engine/storage.h> // MapGen
 
-#include "mapgen.h"
+#include "../lc/mapgen/mapgen.h"
+#include "../lc/economy/player_persist.h"
+#include "../lc/economy/store_bonus.h"
+#include "../lc/ui/terminal_menu.h"
+#include "../lc/ui/vote_menu.h"
+#include "../lc/ui/gameplay_ui.h"
+#include "../lc/economy/company_stats.h"
 
-#include "entities/monster.h"
+#include "../entities/lc/monster.h"
 
 /*
 	Tick
@@ -97,6 +104,12 @@ class CGameContext : public IGameServer
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	static void ConHelp(IConsole::IResult *pResult, void *pUserData);
+	static void ConGameStatus(IConsole::IResult *pResult, void *pUserData);
+	static void ConGcStatus(IConsole::IResult *pResult, void *pUserData);
+	static void ConGcSetQuota(IConsole::IResult *pResult, void *pUserData);
+	static void ConGcSetMoney(IConsole::IResult *pResult, void *pUserData);
+	static void ConMapGenNow(IConsole::IResult *pResult, void *pUserData);
+	static void ConSpawnMonster(IConsole::IResult *pResult, void *pUserData);
 
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
@@ -250,15 +263,85 @@ public:
 	int m_VoteStart;
 	int GetNeedVoteStart()
 	{
-		return ((int)((m_CountInGame/3)*2)) + 1;
+		int Majority = max(1, (m_CountInGame + 1) / 2);
+		int Formula = ((int)((m_CountInGame/3)*2)) + 1;
+		return max(Majority, Formula);
 	}
 
 	// MapGen
 	virtual void SaveMap(const char *path);
 
 	void GenTheMap();
+	void ProcessMapGen();
+	void CancelMapGenJob();
+	bool m_MapGenPending;
+	bool m_MapGenActive;
+	bool m_MapGenApplying;
+	bool m_MapGenFailed;
+	int m_LastMapGenSeed;
+	int m_MapGenRetryLeft;
+	int m_MapGenLoadingBroadcastTick;
+	int m_LastRoundBossBonus;
+	SLcPlayerRoundStats m_aRoundStats[MAX_CLIENTS];
+	SLcCycleStats m_CycleStats;
+	SLcPlayerCareerStats m_aCareerStats[MAX_CLIENTS];
+	int m_aStorePurchaseCount[MAX_CLIENTS];
+	int m_TotalStoreSpend;
+	int m_MapGenProgressStage;
+	int m_LastQuotaMilestonePct;
+	struct SMapGenWorkerJob *m_pMapGenJob;
 
-	static void GenIt(CGameContext *pThis);
+	int m_NextExpeditionTimeBonusSec;
+	int m_aNextArmorBonus[MAX_CLIENTS];
+	int m_aNextFlashBonus[MAX_CLIENTS];
+	CLcStoreBonus m_aStoreBonus[MAX_CLIENTS];
+	int m_aAircraftStock[MAX_CLIENTS];
+	CLcTerminalMenu m_TerminalMenu;
+
+	void ToggleTerminalMenu(int ClientID);
+	void OpenTerminalMenu(int ClientID);
+	void CloseTerminalMenu(int ClientID);
+	void RefreshTerminalMenu(int ClientID);
+	bool HandleTerminalMenuInput(int ClientID, const CNetObj_PlayerInput *pInput, const CNetObj_PlayerInput *pPrevInput);
+	void TerminalMenuGoBack(int ClientID);
+	void DeployAircraft(int ClientID);
+	void OpenTerminalGuidePage(int ClientID, int Page);
+	bool ExecutePlayerVoteCommand(int ClientID, const char *pCmd, const char *pReason);
+
+	void BuildFacilityMarkers();
+	void ClearFacilityMarkers();
+	bool m_FacilityMarkersBuilt;
+
+	struct SLcFacilityMarker
+	{
+		vec2 m_Pos;
+		int m_Type;
+	};
+	array<SLcFacilityMarker> m_aFacilityMarkers;
+	array<class CHazardMarker*> m_apHazardMarkers;
+
+	void TryBuyStoreItem(int ClientID, const char *pItem);
+	void ScanFacility(int ClientID);
+	void CreateScanLink(vec2 From, vec2 To);
+	void GivePlayerScrap(int ClientID, int ScrapType, int Value, int Weight);
+	void DepositScrapInShip(vec2 Pos, const Scrap &Item);
+	void CompactShipScrap(vec2 Center, float Radius = GC_SHIP_SCRAP_MERGE_RADIUS);
+	void CreditShipScrapDeposit(int ClientID, int Value);
+	bool HasPendingExpeditionBonus(int ClientID) const;
+	void ApplyExpeditionBonuses(int ClientID);
+
+	void PersistPlayer(int ClientID);
+	void RestorePersistedPlayer(int ClientID);
+	void FinishPersistedRestore(int ClientID);
+	bool ShouldPersistPlayer(int ClientID) const;
+	void StunMonstersInRadius(vec2 Pos, float Radius, int Ticks);
+	void ScanMonsters(int ClientID);
+	bool PlayerCanDamageMonster(const class CMonster *pMonster) const;
+	int ScaledMonsterDamage(int Dmg, const class CMonster *pMonster) const;
+	void DamageMonsterFromPlayer(class CMonster *pMonster, int FromClient, int Weapon, int Dmg, vec2 Force);
+	void DamageMonstersInRadius(vec2 Pos, int FromClient, int Weapon, float Radius, float InnerRadius, int MaxDmg);
+
+	CLcPlayerPersist m_aPlayerPersist[MAX_CLIENTS];
 
 	// Monster Neox
 	CMonster *m_apMonsters[MAX_MONSTERS];
@@ -266,7 +349,7 @@ public:
 	void OnMonsterDeath(int MonsterID);
 	bool IsValidPlayer(int PlayerID);
 
-	void NewMonster(int Type);
+	void NewMonster(int Type, bool Boss = false);
 	void HandleMonsterSpawn();
 	int m_NeedSpawnTick[NUM_MONSTER_TYPES];
 

@@ -1,8 +1,10 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <game/generated/protocol.h>
-#include <game/server/gamecontext.h>
+#include <game/server/core/gamecontext.h>
+#include <game/server/lc/expedition/balance.h>
 #include "projectile.h"
+#include "../lc/monster.h"
 
 CProjectile::CProjectile(CGameWorld *pGameWorld, int Type, int Owner, vec2 Pos, vec2 Dir, int Span,
 		int Damage, bool Explosive, float Force, int SoundImpact, int Weapon)
@@ -63,18 +65,43 @@ void CProjectile::Tick()
 	vec2 CurPos = GetPos(Ct);
 	int Collide = GameServer()->Collision()->IntersectLine(PrevPos, CurPos, &CurPos, 0);
 	CCharacter *OwnerChar = GameServer()->GetPlayerChar(m_Owner);
+
+	vec2 MonHitPos = CurPos;
+	const bool MonsterOwned = m_Owner >= CMonster::SnapClientID(0) && m_Owner < MAX_CLIENTS;
+	CMonster *pMonster = 0;
+	if(!MonsterOwned)
+		pMonster = GameServer()->m_World.IntersectMonster(PrevPos, CurPos, 6.0f, MonHitPos);
+	if(pMonster && !GameServer()->PlayerCanDamageMonster(pMonster))
+		pMonster = 0;
+
 	CCharacter *TargetChr = GameServer()->m_World.IntersectCharacter(PrevPos, CurPos, 6.0f, CurPos, OwnerChar);
+	if(pMonster && TargetChr)
+	{
+		if(distance(PrevPos, MonHitPos) <= distance(PrevPos, CurPos))
+		{
+			TargetChr = 0;
+			CurPos = MonHitPos;
+		}
+		else
+			pMonster = 0;
+	}
+	else if(pMonster)
+		CurPos = MonHitPos;
 
 	m_LifeSpan--;
 
-	if(TargetChr || Collide || m_LifeSpan < 0 || GameLayerClipped(CurPos))
+	if(pMonster || TargetChr || Collide || m_LifeSpan < 0 || GameLayerClipped(CurPos))
 	{
 		if(m_LifeSpan >= 0 || m_Weapon == WEAPON_GRENADE)
 			GameServer()->CreateSound(CurPos, m_SoundImpact);
 
 		if(m_Explosive)
 			GameServer()->CreateExplosion(CurPos, m_Owner, m_Weapon, false);
-
+		else if(pMonster)
+		{
+			int Dmg = m_Weapon == WEAPON_SHOTGUN ? GC_PLAYER_SHOTGUN_MONSTER_DMG : GC_PLAYER_GUN_MONSTER_DMG;
+			GameServer()->DamageMonsterFromPlayer(pMonster, m_Owner, m_Weapon, Dmg, m_Direction * max(0.001f, m_Force));
+		}
 		else if(TargetChr)
 			TargetChr->TakeDamage(m_Direction * max(0.001f, m_Force), m_Damage, m_Owner, m_Weapon);
 

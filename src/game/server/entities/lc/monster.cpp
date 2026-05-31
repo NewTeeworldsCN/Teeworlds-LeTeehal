@@ -5,32 +5,73 @@
 
 #include <new>
 #include <engine/shared/config.h>
-#include <game/server/gamecontext.h>
+#include <game/server/lc/expedition/balance.h>
+#include <game/server/lc/hazards/hazards.h>
+#include <game/server/lc/ui/guide.h>
+#include <game/server/lc/ui/terminal_actions.h>
+#include <game/server/lc/economy/company_stats.h>
+#include <game/server/core/gamecontext.h>
 #include <game/mapitems.h>
 
-#include "laser.h"
-#include "projectile.h"
+#include "../core/laser.h"
+#include "../core/projectile.h"
+#include "../core/character.h"
 #include "monster.h"
 
-CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor)
+CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor, bool Boss)
 : CEntity(pWorld, CGameWorld::ENTTYPE_MONSTER)
 {
     m_MonsterID = MonsterID;
     m_Type = Type;
-	m_ProximityRadius = ms_PhysSize;
+    m_Boss = Boss;
+    m_BossType = Type;
+	m_ProximityRadius = Boss ? ms_PhysSize + 10 : ms_PhysSize;
     m_MaxArmor = Armor;
 	m_Armor = Armor;
     m_Health = 10 + Health;
 	m_MaxHealth = 10 + Health;
     m_DieTick = -1;
     m_Freeze = false;
+    m_FreezeUntilTick = 0;
+    m_StareAccum = 0;
+    m_LastCoilSoundTick = 0;
+    mem_zero(m_LastCoilStareBroadcastTick, sizeof(m_LastCoilStareBroadcastTick));
+    m_LastFireTick = 0;
+    m_LastHoardChatTick = 0;
+    m_Exploded = false;
+    m_Hidden = false;
+    m_BrackenTelegraphSent = false;
+    m_GrassAmbushTick = 0;
+    mem_zero(&m_Ninja, sizeof(m_Ninja));
+    m_Mobility = MobilityTypeFor(Type);
+    m_MobilityHookActive = false;
+    m_MobilityFlyActive = false;
+    m_MobilityWallActive = false;
+    m_MobilityHookDir = vec2(0, 0);
 
 	Spawn();
 
-    m_ActiveWeapon = m_Type;
+    m_ActiveWeapon = WEAPON_HAMMER;
+    switch(Type)
+    {
+    case TYPE_SATIETY: m_ActiveWeapon = WEAPON_GUN; break;
+    case TYPE_LEEK_BOX: m_ActiveWeapon = WEAPON_NINJA; break;
+    case TYPE_BUG: m_ActiveWeapon = WEAPON_SHOTGUN; break;
+    case TYPE_FEAR: m_ActiveWeapon = WEAPON_RIFLE; break;
+    case TYPE_HUNTER: m_ActiveWeapon = WEAPON_GUN; break;
+    case TYPE_BOMBER: m_ActiveWeapon = WEAPON_GRENADE; break;
+    case TYPE_LEECH: m_ActiveWeapon = WEAPON_HAMMER; break;
+    case TYPE_STALKER: m_ActiveWeapon = WEAPON_NINJA; break;
+    default: break;
+    }
 
-    for(int i = 0; i < ENTITY_NUM; i ++)
-        m_aIDs[i] = Server()->SnapNewID();
+    if(Type == TYPE_STALKER)
+    {
+        m_Health = 8;
+        m_MaxHealth = 8;
+        m_Armor = 0;
+        m_MaxArmor = 0;
+    }
 
     if(Type == TYPE_SATIETY)
         Die(60*Server()->TickSpeed());
@@ -46,9 +87,6 @@ void CMonster::Reset()
 void CMonster::Destroy()
 {
     GameWorld()->DestroyEntity(this);
-
-    for(int i = 0; i < ENTITY_NUM; i ++)
-        Server()->SnapFreeID(m_aIDs[i]);
 }
 
 void CMonster::Spawn()
@@ -143,6 +181,154 @@ bool CMonster::IsGrounded()
 	return false;
 }
 
+EMobilityType CMonster::MobilityTypeFor(int Type) const
+{
+	switch(Type)
+	{
+	case TYPE_PULLHANDLE:
+	case TYPE_LEECH:
+	case TYPE_BUG:
+		return MOBILITY_HOOK;
+	case TYPE_HUNTER:
+	case TYPE_SATIETY:
+		return MOBILITY_FLY;
+	case TYPE_FEAR:
+	case TYPE_LEEK_BOX:
+		return MOBILITY_WALL;
+	default:
+		return MOBILITY_GROUND;
+	}
+}
+
+bool CMonster::NeedsMobilityAssist()
+{
+	CCollision *pCol = GameServer()->Collision();
+	if(!pCol)
+		return false;
+
+	if(IsGrounded())
+		return false;
+
+	const float Tile = 32.f;
+	const float MapBottom = (pCol->GetHeight() - GC_MONSTER_BOTTOM_MARGIN_TILES) * Tile;
+	if(m_Pos.y > MapBottom)
+		return true;
+
+	if(m_Core.m_Vel.y > 120.f)
+		return true;
+
+	if(m_Path.m_StuckTick > Server()->TickSpeed())
+		return true;
+
+	if(!pCol->IntersectLine(m_Pos, m_Pos + vec2(0, Tile * GC_MONSTER_PIT_CHECK_TILES), 0x0, 0x0))
+		return true;
+
+	return false;
+}
+
+bool CMonster::FindHookAnchor(vec2 Target, vec2 *pOutDir)
+{
+	CCollision *pCol = GameServer()->Collision();
+	if(!pCol || !pOutDir)
+		return false;
+
+	vec2 ToTarget = Target - m_Pos;
+	if(length(ToTarget) < 1.f)
+		ToTarget = vec2((float)m_Path.m_Direction, -1.f);
+	else
+		ToTarget = normalize(ToTarget);
+
+	const float HookLen = GameServer()->m_World.m_Core.m_Tuning.m_HookLength;
+	vec2 aDirs[6];
+	int NumDirs = 0;
+	aDirs[NumDirs++] = ToTarget;
+	aDirs[NumDirs++] = vec2(0.f, -1.f);
+	aDirs[NumDirs++] = normalize(vec2(ToTarget.x, -1.f));
+	aDirs[NumDirs++] = normalize(vec2((float)m_Path.m_Direction, -1.f));
+	aDirs[NumDirs++] = normalize(vec2(-ToTarget.x, -0.75f));
+	aDirs[NumDirs++] = normalize(vec2(ToTarget.x, -0.75f));
+
+	for(int i = 0; i < NumDirs; i++)
+	{
+		if(length(aDirs[i]) < 0.01f)
+			continue;
+
+		vec2 End = m_Pos + aDirs[i] * HookLen;
+		vec2 HitPos;
+		int Hit = pCol->IntersectLine(m_Pos, End, &HitPos, 0x0);
+		if(!Hit || (Hit & CCollision::COLFLAG_NOHOOK))
+			continue;
+
+		vec2 Dir = HitPos - m_Pos;
+		if(length(Dir) < 48.f)
+			continue;
+
+		*pOutDir = normalize(Dir);
+		return true;
+	}
+
+	return false;
+}
+
+void CMonster::HandleMobility(CEntity *pVict)
+{
+	if(m_Freeze)
+		return;
+	if(m_Type == TYPE_FEAR && IsSeenByAnyPlayer())
+		return;
+	if(m_Type == TYPE_LEEK_BOX)
+		return;
+
+	CCollision *pCol = GameServer()->Collision();
+	if(!pCol)
+		return;
+
+	vec2 Target = pVict ? pVict->m_Pos : m_Pos + vec2((float)m_Path.m_Direction * 400.f, -200.f);
+	const bool Assist = NeedsMobilityAssist();
+	const float MapBottom = (pCol->GetHeight() - GC_MONSTER_BOTTOM_MARGIN_TILES) * 32.f;
+
+	if(m_Pos.y > MapBottom)
+	{
+		vec2 RescueDir;
+		if(FindHookAnchor(m_Pos + vec2(0.f, -600.f), &RescueDir))
+		{
+			m_MobilityHookDir = RescueDir;
+			m_MobilityHookActive = true;
+			m_WillHook = true;
+		}
+		else
+		{
+			Spawn();
+			return;
+		}
+	}
+
+	switch(m_Mobility)
+	{
+	case MOBILITY_HOOK:
+		if(Assist || (pVict && distance(m_Pos, pVict->m_Pos) > 320.f))
+		{
+			vec2 HookDir;
+			if(FindHookAnchor(Target, &HookDir))
+			{
+				m_MobilityHookDir = HookDir;
+				m_MobilityHookActive = true;
+				m_WillHook = true;
+			}
+		}
+		break;
+	case MOBILITY_FLY:
+		m_MobilityFlyActive = Assist || pVict != 0;
+		break;
+	case MOBILITY_WALL:
+		if(Assist || !IsGrounded())
+			m_MobilityWallActive = true;
+		break;
+	default:
+		break;
+	}
+}
+
 
 void CMonster::HandleNinja(bool IsPredicted)
 {
@@ -177,6 +363,8 @@ void CMonster::HandleNinja(bool IsPredicted)
 
 			for (int i = 0; i < Num; ++i)
 			{
+				if(aEnts[i]->m_Freeze || aEnts[i]->m_InShip)
+					continue;
 				// make sure we haven't Hit this object before
 				bool bAlreadyHit = false;
 				for (int j = 0; j < m_NumObjectsHit; j++)
@@ -238,9 +426,10 @@ void CMonster::HandleNinja(bool IsPredicted)
 
 void CMonster::Move()
 {
-    if(m_Freeze)
+    if(m_Freeze || (m_Type == TYPE_FEAR && IsSeenByAnyPlayer()))
     {
         m_Core.m_Vel = vec2(0,0);
+        return;
     }
 	float RampValue = VelocityRamp(length(m_Core.m_Vel)*50, GameServer()->m_World.m_Core.m_Tuning.m_VelrampStart, GameServer()->m_World.m_Core.m_Tuning.m_VelrampRange, GameServer()->m_World.m_Core.m_Tuning.m_VelrampCurvature);
 
@@ -258,19 +447,86 @@ void CMonster::HandleCore()
 	// get ground state
 	bool Grounded = IsGrounded();
 
-    CEntity *pVict;
-    if(m_Type == TYPE_SATIETY)
-        pVict = GameWorld()->ClosestScrap(m_Pos, 10000, 0x0);
-    else
-        pVict = GameWorld()->ClosestCharacter(m_Pos, 10000, 0x0, false);
+	CEntity *pVict = 0;
+	vec2 TargetDirection = vec2(0, 0);
+	if(m_Type == TYPE_SATIETY)
+		pVict = HighestValuePlayer(m_Pos, 10000.f);
+	else if(m_Type == TYPE_FEAR)
+		pVict = ClosestPlayer(m_Pos, 10000.f);
+	else if(m_Type == TYPE_HUNTER || m_Type == TYPE_BOMBER || m_Type == TYPE_LEECH || m_Type == TYPE_STALKER)
+		pVict = ClosestPlayer(m_Pos, 10000.f);
+	else
+		pVict = GameWorld()->ClosestCharacter(m_Pos, 10000, 0x0, false);
 
-	vec2 TargetDirection = pVict ? normalize(pVict->m_Pos - m_Pos) : vec2(0, 0);
+	if(m_Type == TYPE_FEAR && IsSeenByAnyPlayer())
+	{
+		m_WillJump = false;
+		m_Core.m_Vel = vec2(0, 0);
+		m_Core.m_HookState = HOOK_IDLE;
+		m_Core.m_HookPos = m_Pos;
+		m_Core.m_HookedPlayer = -1;
+		return;
+	}
+
+	if(m_Type == TYPE_FEAR && pVict)
+		TargetDirection = normalize(pVict->m_Pos - m_Pos);
+	else if(pVict)
+		TargetDirection = normalize(pVict->m_Pos - m_Pos);
+	else if(m_MobilityHookActive && length(m_MobilityHookDir) > 0.01f)
+		TargetDirection = normalize(m_MobilityHookDir);
+
+	float MaxSpeed = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlSpeed : GameServer()->m_World.m_Core.m_Tuning.m_AirControlSpeed;
+	if(m_Type == TYPE_BOMBER)
+		MaxSpeed *= 0.65f;
+	if(m_Type == TYPE_STALKER)
+		MaxSpeed *= 1.5f;
+	if(m_Type == TYPE_FEAR)
+		MaxSpeed *= GC_COILHEAD_SPEED_PERCENT / 100.f;
+	float Accel = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlAccel : GameServer()->m_World.m_Core.m_Tuning.m_AirControlAccel;
+	float Friction = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundFriction : GameServer()->m_World.m_Core.m_Tuning.m_AirFriction;
 
 	m_Core.m_Vel.y += GameServer()->m_World.m_Core.m_Tuning.m_Gravity;
 
-	float MaxSpeed = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlSpeed : GameServer()->m_World.m_Core.m_Tuning.m_AirControlSpeed;
-	float Accel = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlAccel : GameServer()->m_World.m_Core.m_Tuning.m_AirControlAccel;
-	float Friction = Grounded ? GameServer()->m_World.m_Core.m_Tuning.m_GroundFriction : GameServer()->m_World.m_Core.m_Tuning.m_AirFriction;
+	if(m_MobilityFlyActive)
+	{
+		m_Core.m_Vel.y -= GameServer()->m_World.m_Core.m_Tuning.m_Gravity * (GC_MONSTER_FLY_GRAVITY_CANCEL_PERCENT / 100.f);
+		if(pVict)
+		{
+			vec2 FlyDir = normalize(pVict->m_Pos - m_Pos);
+			m_Core.m_Vel.x = SaturatedAdd(-MaxSpeed * 1.2f, MaxSpeed * 1.2f, m_Core.m_Vel.x, FlyDir.x * Accel * 0.6f);
+			m_Core.m_Vel.y = SaturatedAdd(-MaxSpeed * 1.2f, MaxSpeed * 1.2f, m_Core.m_Vel.y, FlyDir.y * Accel * 0.45f);
+		}
+		else if(NeedsMobilityAssist())
+			m_Core.m_Vel.y -= 250.f;
+	}
+
+	if(m_MobilityWallActive && !IsGrounded())
+	{
+		const float WallDist = (float)m_ProximityRadius + 4.f;
+		const bool WallLeft = GameServer()->Collision()->CheckPoint(m_Pos + vec2(-WallDist, 0.f));
+		const bool WallRight = GameServer()->Collision()->CheckPoint(m_Pos + vec2(WallDist, 0.f));
+		int CrawlSpeed = GC_MONSTER_WALL_CRAWL_SPEED;
+		int ClimbSpeed = GC_MONSTER_WALL_CLIMB_SPEED;
+		if(m_Type == TYPE_FEAR)
+		{
+			CrawlSpeed = GC_COILHEAD_WALL_CRAWL_SPEED;
+			ClimbSpeed = GC_COILHEAD_WALL_CLIMB_SPEED;
+		}
+		if(WallLeft || WallRight)
+		{
+			m_Core.m_Vel.y = minimum(m_Core.m_Vel.y, (float)-ClimbSpeed);
+			if(WallLeft)
+			{
+				m_Core.m_Vel.x = maximum(m_Core.m_Vel.x, (float)CrawlSpeed);
+				m_Path.m_Direction = 1;
+			}
+			if(WallRight)
+			{
+				m_Core.m_Vel.x = minimum(m_Core.m_Vel.x, (float)-CrawlSpeed);
+				m_Path.m_Direction = -1;
+			}
+		}
+	}
 
    // handle jump
     if(m_WillJump)
@@ -300,7 +556,7 @@ void CMonster::HandleCore()
     }
 
     // handle hook
-    if(m_WillHook)
+    if(m_WillHook || m_MobilityHookActive)
     {
         if(m_Core.m_HookState == HOOK_IDLE)
         {
@@ -311,7 +567,7 @@ void CMonster::HandleCore()
             m_Core.m_HookTick = 0;
         }
     }
-    else
+    else if(m_Core.m_HookedPlayer != -1 || m_Core.m_HookState == HOOK_IDLE)
     {
         m_Core.m_HookedPlayer = -1;
         m_Core.m_HookState = HOOK_IDLE;
@@ -431,6 +687,8 @@ void CMonster::HandleCore()
 			// this makes it easier to get on top of an platform
 			if(HookVel.y > 0)
 				HookVel.y *= 0.3f;
+			else if(m_MobilityHookActive)
+				HookVel.y *= 1.35f;
 
 			// the hook will boost it's power if the player wants to move
 			// in that direction. otherwise it will dampen everything abit
@@ -454,6 +712,12 @@ void CMonster::HandleCore()
 			m_Core.m_HookedPlayer = -1;
 			m_Core.m_HookState = HOOK_RETRACTED;
 			m_Core.m_HookPos = m_Pos;
+		}
+		else if(m_Core.m_HookedPlayer == -1 && m_Core.m_HookTick > Server()->TickSpeed() * 2)
+		{
+			m_Core.m_HookState = HOOK_RETRACT_START;
+			m_MobilityHookActive = false;
+			m_MobilityHookDir = vec2(0, 0);
 		}
 	}
 
@@ -488,8 +752,21 @@ void CMonster::HandleCore()
 
     if(m_Core.m_HookState == HOOK_GRABBED && m_Core.m_HookedPlayer == -1)
     {
-        m_Core.m_HookState = HOOK_IDLE;
-		m_Core.m_HookPos = m_Pos;
+        if(!m_MobilityHookActive || IsGrounded())
+        {
+            m_Core.m_HookState = HOOK_IDLE;
+            m_Core.m_HookPos = m_Pos;
+            m_MobilityHookActive = false;
+            m_MobilityHookDir = vec2(0, 0);
+        }
+    }
+
+    if(IsGrounded())
+    {
+        m_MobilityHookActive = false;
+        m_MobilityFlyActive = false;
+        m_MobilityWallActive = false;
+        m_MobilityHookDir = vec2(0, 0);
     }
 }
 
@@ -508,13 +785,42 @@ void CMonster::FireWeapon()
 
 void CMonster::Tick()
 {
-    for(int i = 0; i < ENTITY_NUM; i ++)
-        m_aSnapPos[i] = m_Pos + normalize(GetDir(pi/180 * ((Server()->Tick() + i*(360/ENTITY_NUM)%360+1) * ENTITY_SPEED)))*(m_ProximityRadius/2);
+	if(m_FreezeUntilTick > 0 && Server()->Tick() >= m_FreezeUntilTick)
+	{
+		m_FreezeUntilTick = 0;
+		m_Freeze = false;
+	}
 
-	HandleActions();
-	HandleWeapons();
-	HandleCore();
-	Move();
+	if(m_Health <= 0)
+	{
+		if(m_DieTick < 0)
+			Die(1);
+	}
+	else if(m_Ninja.m_CurrentMoveTime > 0)
+	{
+		HandleNinja(false);
+	}
+	else if(m_Type == TYPE_FEAR && IsSeenByAnyPlayer())
+	{
+		m_WillJump = false;
+		m_WillHook = false;
+		m_Core.m_Vel = vec2(0, 0);
+		m_Core.m_HookState = HOOK_IDLE;
+		m_Core.m_HookPos = m_Pos;
+		m_Core.m_HookedPlayer = -1;
+		m_Path.m_Direction = 0;
+		m_Path.m_ActualDirection = 0;
+		if(IsGrounded())
+			m_Core.m_Jumped = 0;
+		HandleCoilheadStareBroadcast();
+	}
+	else
+	{
+		HandleActions();
+		HandleWeapons();
+		HandleCore();
+		Move();
+	}
 
     if(m_DieTick > 0)
     {
@@ -531,6 +837,11 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
         m_Core.m_Vel = vec2(0, 0); // this works like "Hey you are lose connection" hahahahhaha
         m_WillJump = false;
         return;
+    }
+
+    if(m_Type == TYPE_BUG)
+    {
+        m_Hidden = GameServer()->Collision()->GetHazardAt(m_Pos) == LC_HAZARD_GRASS;
     }
  
     if(m_Path.m_LastPos.x == m_Pos.x && m_Path.m_LastPos.y == m_Pos.y) // This is done because monsters are SOMETIMES stuck on a corner and can't move because of it
@@ -555,7 +866,12 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 	const int JUMP_LIMIT = 11;
 	//const int AIRJUMP_LIMIT = 6;
 	const int TS = 32; // TS = TileSize, not TeamSpeak.
-    const float MaxSpeed = IsGrounded() ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlSpeed : GameServer()->m_World.m_Core.m_Tuning.m_AirControlSpeed;
+    const float MaxSpeedBase = IsGrounded() ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlSpeed : GameServer()->m_World.m_Core.m_Tuning.m_AirControlSpeed;
+    float MaxSpeed = MaxSpeedBase;
+    if(m_Type == TYPE_FEAR)
+        MaxSpeed *= GC_COILHEAD_SPEED_PERCENT / 100.f;
+    if(m_Type == TYPE_STALKER)
+        MaxSpeed *= 1.5f;
     const float Accel = IsGrounded() ? GameServer()->m_World.m_Core.m_Tuning.m_GroundControlAccel : GameServer()->m_World.m_Core.m_Tuning.m_AirControlAccel;
     const float Friction = IsGrounded() ? GameServer()->m_World.m_Core.m_Tuning.m_GroundFriction : GameServer()->m_World.m_Core.m_Tuning.m_AirFriction;
 
@@ -563,7 +879,7 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 
     CEntity *pVict;
     if(m_Type == TYPE_SATIETY)
-        pVict = GameWorld()->ClosestScrap(m_Pos, 10000, 0x0);
+        pVict = HighestValuePlayer(m_Pos, 10000.f);
     else if(m_Type == TYPE_LEEK_BOX)
     {
         pVict = GameServer()->m_World.ClosestCharacter(GetPos(), 240, 0x0, false);
@@ -574,11 +890,93 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
             {
                 ((CCharacter *)pVict)->m_LeekTick = 15*Server()->TickSpeed();
                 int CID = ((CCharacter *)pVict)->GetPlayer()->GetCID();
-                GameServer()->SendChatTarget(CID, _("[生命维持系统]请回到飞船！你已被感染韭菜盒子病毒！请保护公司财产！"));
+                GameServer()->SendBroadcast(CID, BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("[生命维持系统]请回到飞船！你已被感染韭菜盒子病毒！请保护公司财产！"));
                 Die(15*Server()->TickSpeed());
                 m_Freeze = true;
             }
             return;
+        }
+    }
+    else if(m_Type == TYPE_FEAR)
+    {
+        if(IsSeenByAnyPlayer())
+        {
+            m_Path.m_Direction = 0;
+            m_Path.m_ActualDirection = 0;
+            m_WillJump = false;
+            m_Core.m_Vel = vec2(0, 0);
+            return;
+        }
+
+        pVict = ClosestPlayer(m_Pos, 10000.f);
+        if(pVict)
+        {
+            CCharacter *pPlayer = (CCharacter *)pVict;
+            float Dist = distance(m_Pos, pPlayer->m_Pos);
+
+            if(Dist < (float)GC_COILHEAD_KILL_RANGE)
+            {
+                pPlayer->LCDie();
+                GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE, CmaskAll());
+                GameServer()->SendChatTarget(pPlayer->GetPlayer()->GetCID(), _("弹簧头抓住了你！"));
+                return;
+            }
+
+            if(Dist < (float)GC_COILHEAD_RANGE)
+            {
+                if(m_LastCoilSoundTick + Server()->TickSpeed() * GC_COILHEAD_SOUND_SEC <= Server()->Tick())
+                {
+                    GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG, CmaskAll());
+                    m_LastCoilSoundTick = Server()->Tick();
+                }
+            }
+
+            if(pPlayer->m_Pos.x > m_Pos.x + 8.f)
+                m_Path.m_ActualDirection = DIRECTION_RIGHT;
+            else if(pPlayer->m_Pos.x < m_Pos.x - 8.f)
+                m_Path.m_ActualDirection = DIRECTION_LEFT;
+            else
+                m_Path.m_ActualDirection = DIRECTION_ZERO;
+        }
+    }
+    else if(m_Type == TYPE_BOMBER)
+    {
+        pVict = ClosestPlayer(m_Pos, 10000.f);
+        if(pVict && distance(m_Pos, pVict->m_Pos) < (float)GC_BOMBER_DETONATE_RANGE && !m_Exploded)
+        {
+            m_Exploded = true;
+            GameServer()->CreateExplosion(m_Pos, -1, WEAPON_GRENADE, false);
+            GameServer()->CreateSound(m_Pos, SOUND_GRENADE_EXPLODE, CmaskAll());
+            Reset();
+            return;
+        }
+    }
+    else if(m_Type == TYPE_HUNTER)
+        pVict = ClosestPlayer(m_Pos, 10000.f);
+    else if(m_Type == TYPE_STALKER)
+        pVict = ClosestPlayer(m_Pos, 10000.f);
+    else if(m_Type == TYPE_LEECH)
+        pVict = ClosestPlayer(m_Pos, (float)GC_LEECH_HOOK_RANGE);
+    else if(m_Type == TYPE_BUG)
+    {
+        pVict = GameWorld()->ClosestCharacter(m_Pos, 10000, 0x0, false);
+        if(pVict)
+        {
+            CCharacter *pChr = (CCharacter *)pVict;
+            float Dist = distance(m_Pos, pChr->m_Pos);
+            if(m_Hidden && !m_BrackenTelegraphSent && Dist < (float)(GC_BRACKEN_AMBUSH_RANGE + 120) && Dist >= (float)GC_BRACKEN_AMBUSH_RANGE)
+            {
+                m_BrackenTelegraphSent = true;
+                GameServer()->SendChatTarget(pChr->GetPlayer()->GetCID(), _("前方草丛有异动…"));
+            }
+            if(m_Hidden && Dist < GC_BRACKEN_AMBUSH_RANGE)
+            {
+                m_Hidden = false;
+                m_GrassAmbushTick = Server()->Tick() + Server()->TickSpeed() * 3;
+                GameServer()->SendChatTarget(pChr->GetPlayer()->GetCID(), _("草丛中突然窜出蔓背怪！"));
+            }
+            if(m_Hidden)
+                pVict = 0;
         }
     }
     else
@@ -729,14 +1127,23 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 
         if(distance(pVict->m_Pos, m_Pos) < 800)
         {
-            if(m_Type == TYPE_PULLHANDLE || m_Type == TYPE_BUG)
+            if(m_Type == TYPE_PULLHANDLE || m_Type == TYPE_BUG || m_Type == TYPE_LEECH)
             {
                 Die(30*Server()->TickSpeed());
                 m_WillHook = true;
-                if(Server()->Tick()%25 == 0)
+                int WeightInterval = 25;
+                if(m_Type == TYPE_BUG && GameServer()->Collision()->GetHazardAt(m_Pos) == LC_HAZARD_GRASS)
+                    WeightInterval = 12;
+                if(m_Type == TYPE_PULLHANDLE && Server()->Tick() % WeightInterval == 0)
                 {
                     ((CCharacter *)pVict)->GetPlayer()->m_AddedWeight++;
                     GameServer()->ResetVotes(((CCharacter *)pVict)->GetPlayer()->GetCID());
+                }
+                if(m_Type == TYPE_LEECH && Server()->Tick() % 40 == 0 && distance(pVict->m_Pos, m_Pos) < (float)GC_LEECH_DRAIN_RANGE)
+                {
+                    CCharacter *pChr = (CCharacter *)pVict;
+                    pChr->TakeDamage(vec2(0, 0.2f), 1, SnapClientID(m_MonsterID), WEAPON_HAMMER);
+                    GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT, CmaskAll());
                 }
             }
             bool WillJump = CanJump();
@@ -871,14 +1278,78 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
 
     if(pVict && m_Type == TYPE_SATIETY)
     {
-        if(distance(pVict->m_Pos, m_Pos) < 32)
+        CCharacter *pChr = (CCharacter *)pVict;
+        if(m_LastHoardChatTick + Server()->TickSpeed() * 8 <= Server()->Tick())
         {
-            pVict->Reset();
-            Reset();
+            m_LastHoardChatTick = Server()->Tick();
+            GameServer()->SendChatTarget(-1, _("囤积虫正在追 {str:name} 的高价值背包"), "name", Server()->ClientName(pChr->GetPlayer()->GetCID()));
+        }
+    }
+
+    if(m_Type == TYPE_HUNTER && pVict)
+    {
+        CCharacter *pChr = (CCharacter *)pVict;
+        float Dist = distance(m_Pos, pChr->m_Pos);
+        if(Dist < (float)GC_HUNTER_FIRE_RANGE && !GameServer()->Collision()->IntersectLine(m_Pos, pChr->m_Pos, 0x0, 0x0))
+        {
+            if(m_LastFireTick + Server()->TickSpeed() * GC_HUNTER_FIRE_SEC <= Server()->Tick())
+            {
+                vec2 Dir = normalize(pChr->m_Pos - m_Pos);
+                vec2 FirePos = m_Pos + Dir * (float)(m_ProximityRadius + 16);
+                new CProjectile(GameWorld(), WEAPON_GUN,
+                    SnapClientID(m_MonsterID),
+                    FirePos,
+                    Dir,
+                    (int)(Server()->TickSpeed() * GameServer()->Tuning()->m_GunLifetime),
+                    1, 0, 0, -1, WEAPON_GUN);
+                GameServer()->CreateSound(m_Pos, SOUND_GUN_FIRE, CmaskAll());
+                m_LastFireTick = Server()->Tick();
+            }
+        }
+    }
+    else if(m_Type == TYPE_STALKER && pVict && m_Ninja.m_CurrentMoveTime <= 0)
+    {
+        CCharacter *pChr = (CCharacter *)pVict;
+        float Dist = distance(m_Pos, pChr->m_Pos);
+        const float MeleeReach = m_ProximityRadius + pChr->m_ProximityRadius + 14.f;
+        const float LungeReach = MeleeReach + (float)GC_STALKER_LUNGE_EXTRA;
+        if(Dist < LungeReach &&
+            m_LastFireTick + Server()->TickSpeed() * GC_STALKER_ATTACK_SEC <= Server()->Tick() &&
+            !GameServer()->Collision()->IntersectLine(m_Pos, pChr->m_Pos, 0x0, 0x0))
+        {
+            vec2 Dir = pChr->m_Pos - m_Pos;
+            if(length(Dir) < 0.01f)
+                Dir = vec2(1.f, 0.f);
+            else
+                Dir = normalize(Dir);
+
+            if(Dist <= MeleeReach)
+            {
+                m_NumObjectsHit = 0;
+                GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+                GameServer()->CreateSound(pChr->m_Pos, SOUND_NINJA_HIT);
+                if(length(pChr->m_Pos - m_Pos) > 0.0f)
+                    GameServer()->CreateHammerHit(pChr->m_Pos - Dir * m_ProximityRadius * 0.5f);
+                else
+                    GameServer()->CreateHammerHit(m_Pos);
+                pChr->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f,
+                    g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, SnapClientID(m_MonsterID), WEAPON_NINJA);
+                m_LastFireTick = Server()->Tick();
+            }
+            else
+            {
+                m_NumObjectsHit = 0;
+                m_Ninja.m_ActivationDir = Dir;
+                m_Ninja.m_OldVelAmount = (int)length(m_Core.m_Vel);
+                m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime;
+                GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+                m_LastFireTick = Server()->Tick();
+            }
         }
     }
 
     m_Path.m_Direction = m_Path.m_ActualDirection;
+    HandleMobility(pVict);
 }
 
 void CMonster::TickPaused()
@@ -929,20 +1400,44 @@ bool CMonster::IncreaseArmor(int Amount)
 
 void CMonster::Die(int DieTick)
 {
-    if(m_DieTick < 0)
-        m_DieTick = DieTick;
+	if(DieTick < 1)
+		DieTick = 1;
+	const bool FirstDie = m_DieTick < 0;
+	if(m_DieTick < 0 || DieTick < m_DieTick)
+		m_DieTick = DieTick;
+	if(FirstDie && m_Boss)
+	{
+		g_Config.m_GcMoney += GC_BOSS_KILL_BONUS;
+		GameServer()->m_LastRoundBossBonus += GC_BOSS_KILL_BONUS;
+		int Bonus = GC_BOSS_KILL_BONUS;
+		GameServer()->SendChatTarget(-1, _("【公司】头目 {lstr:name} 已被清除，公司奖励 {int:bonus} 元"), "name", LcMonsterName(m_BossType), "bonus", &Bonus);
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			if(GameServer()->m_apPlayers[i])
+				LcGrantAchievement(GameServer(), i, LC_ACH_FIRST_BOSS, _("【成就】{str:name} 达成「首次清除头目」"));
+	}
+}
+
+void CMonster::Stun(int Ticks)
+{
+	if(Ticks <= 0)
+		return;
+	m_FreezeUntilTick = Server()->Tick() + Ticks;
+	m_Freeze = true;
 }
 
 const char *CMonster::MonsterName()
 {
-    switch(m_Type)
-    {
-        case TYPE_PULLHANDLE: return "拉拉手"; break;
-        case TYPE_SATIETY: return "吃饱饱"; break;
-        case TYPE_LEEK_BOX: return "韭菜盒子"; break;
-        case TYPE_BUG: return "沉沉虫"; break;
-        case TYPE_FEAR: return "害怕"; break;
-    }
+    return LcMonsterName(m_Type);
+}
+
+const char *CMonster::MonsterDesc()
+{
+    return LcMonsterDesc(m_Type);
+}
+
+const char *CMonster::MonsterDescShort()
+{
+    return LcMonsterDescShort(m_Type);
 }
 
 bool CMonster::TakeDamage(vec2 Force, int Dmg, int From, int Weapon, bool FromMonster, bool Drain, bool FromReflect)
@@ -994,6 +1489,8 @@ bool CMonster::TakeDamage(vec2 Force, int Dmg, int From, int Weapon, bool FromMo
 		}
 
 		m_Health -= Dmg;
+		if(m_Health < 0)
+			m_Health = 0;
 	}
 
 	m_DamageTakenTick = Server()->Tick();
@@ -1039,6 +1536,13 @@ bool CMonster::TakeDamage(vec2 Force, int Dmg, int From, int Weapon, bool FromMo
 				pChr->SetEmote(EMOTE_HAPPY, Server()->Tick() + Server()->TickSpeed());
 		}
 
+		if(m_Type == TYPE_BOMBER && !m_Exploded)
+		{
+			m_Exploded = true;
+			GameServer()->CreateExplosion(m_Pos, From, WEAPON_GRENADE, false);
+			GameServer()->CreateSound(m_Pos, SOUND_GRENADE_EXPLODE, CmaskAll());
+		}
+
 		Die(1);
 
 		return false;
@@ -1054,113 +1558,256 @@ bool CMonster::TakeDamage(vec2 Force, int Dmg, int From, int Weapon, bool FromMo
 	return true;
 }
 
+CCharacter *CMonster::ClosestPlayer(vec2 Pos, float Radius)
+{
+	float ClosestRange = Radius * 2.f;
+	CCharacter *pClosest = 0;
+
+	for(CCharacter *pChr = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChr; pChr = (CCharacter *)pChr->TypeNext())
+	{
+		if(!pChr->GetPlayer() || pChr->m_Freeze || pChr->m_InShip)
+			continue;
+
+		float Len = distance(Pos, pChr->m_Pos);
+		if(Len < pChr->m_ProximityRadius + Radius && Len < ClosestRange)
+		{
+			ClosestRange = Len;
+			pClosest = pChr;
+		}
+	}
+
+	return pClosest;
+}
+
+bool CMonster::IsSeenByPlayer(CCharacter *pChr)
+{
+	if(m_Type != TYPE_FEAR || !pChr || !pChr->GetPlayer() || pChr->m_Freeze || pChr->m_InShip)
+		return false;
+	if(distance(pChr->m_Pos, m_Pos) > (float)GC_COILHEAD_RANGE)
+		return false;
+	if(GameServer()->Collision()->IntersectLine(pChr->m_Pos, m_Pos, 0x0, 0x0))
+		return false;
+
+	CPlayer *pP = pChr->GetPlayer();
+	vec2 Aim = normalize(vec2((float)pP->m_LatestActivity.m_TargetX, (float)pP->m_LatestActivity.m_TargetY));
+	vec2 ToMonster = m_Pos - pChr->m_Pos;
+	float Len = length(ToMonster);
+	if(Len < 1.f)
+		return true;
+	return dot(Aim, normalize(ToMonster)) > 0.55f;
+}
+
+bool CMonster::IsSeenByAnyPlayer()
+{
+	for(CCharacter *pChr = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChr; pChr = (CCharacter *)pChr->TypeNext())
+	{
+		if(IsSeenByPlayer(pChr))
+			return true;
+	}
+	return false;
+}
+
+void CMonster::HandleCoilheadStareBroadcast()
+{
+	const int Interval = Server()->TickSpeed() * 2;
+	for(CCharacter *pChr = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChr; pChr = (CCharacter *)pChr->TypeNext())
+	{
+		if(!IsSeenByPlayer(pChr))
+			continue;
+
+		const int CID = pChr->GetPlayer()->GetCID();
+		if(m_LastCoilStareBroadcastTick[CID] + Interval > Server()->Tick())
+			continue;
+
+		m_LastCoilStareBroadcastTick[CID] = Server()->Tick();
+		GameServer()->SendBroadcast(CID, BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("弹簧头被你的注视定住了"));
+	}
+}
+
+CCharacter *CMonster::HighestValuePlayer(vec2 Pos, float Radius)
+{
+	CCharacter *pBest = 0;
+	int BestValue = -1;
+
+	for(CCharacter *pChr = (CCharacter *)GameWorld()->FindFirst(CGameWorld::ENTTYPE_CHARACTER); pChr; pChr = (CCharacter *)pChr->TypeNext())
+	{
+		if(!pChr->GetPlayer() || pChr->m_Freeze || pChr->m_InShip)
+			continue;
+
+		if(distance(Pos, pChr->m_Pos) >= Radius)
+			continue;
+
+		int Value = pChr->GetPlayer()->GetBackpackValue();
+		if(Value > BestValue)
+		{
+			BestValue = Value;
+			pBest = pChr;
+		}
+	}
+
+	return pBest;
+}
+
 void CMonster::Snap(int SnappingClient)
 {
     if(NetworkClipped(SnappingClient))
 		return;
 
-    if(m_Core.m_HookState != HOOK_IDLE)
-    {
-        CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_ID, sizeof(CNetObj_Laser)));
-        if(!pObj)
-            return;
+    if(m_Type == TYPE_BUG && m_Hidden)
+        return;
 
-        pObj->m_X = (int)m_Core.m_HookPos.x;
-        pObj->m_Y = (int)m_Core.m_HookPos.y;
-        pObj->m_FromX = (int)m_Pos.x;
-        pObj->m_FromY = (int)m_Pos.y;
-        pObj->m_StartTick = Server()->Tick();
+    const int ClientID = SnapClientID(m_MonsterID);
+
+    const char *pName = MonsterName();
+    const char *pSkin = "default";
+    const char *pClan = "威胁";
+    int BodyColor = 9830400;
+    int FeetColor = 7864320;
+    int Weapon = WEAPON_HAMMER;
+
+    if(m_Boss)
+    {
+        pSkin = "twintri";
+        pClan = "首领";
+        BodyColor = 16760576;
+        FeetColor = 13369344;
+        Weapon = WEAPON_GRENADE;
+    }
+    else
+    {
+        switch(m_Type)
+        {
+        case TYPE_PULLHANDLE:
+            pSkin = "default";
+            pClan = "布条";
+            BodyColor = 16711680;
+            FeetColor = 13369344;
+            Weapon = WEAPON_HAMMER;
+            break;
+        case TYPE_SATIETY:
+            pSkin = "brownbear";
+            pClan = "囤积";
+            BodyColor = 65280;
+            FeetColor = 32768;
+            Weapon = WEAPON_GUN;
+            break;
+        case TYPE_LEEK_BOX:
+            pSkin = "Coala";
+            pClan = "孢子";
+            BodyColor = 8454143;
+            FeetColor = 5636095;
+            Weapon = WEAPON_NINJA;
+            break;
+        case TYPE_BUG:
+            pSkin = "twinbop";
+            pClan = "蔓背";
+            BodyColor = 32768;
+            FeetColor = 16384;
+            Weapon = WEAPON_SHOTGUN;
+            break;
+        case TYPE_FEAR:
+            pSkin = "bluekitty";
+            pClan = "弹簧";
+            BodyColor = 8388736;
+            FeetColor = 4194432;
+            Weapon = WEAPON_RIFLE;
+            break;
+        case TYPE_HUNTER:
+            pSkin = "limekitty";
+            pClan = "猛禽";
+            BodyColor = 16753920;
+            FeetColor = 16711680;
+            Weapon = WEAPON_GUN;
+            break;
+        case TYPE_BOMBER:
+            pSkin = "saddo";
+            pClan = "爆壳";
+            BodyColor = 16744448;
+            FeetColor = 13369344;
+            Weapon = WEAPON_GRENADE;
+            break;
+        case TYPE_LEECH:
+            pSkin = "cammo";
+            pClan = "吸盘";
+            BodyColor = 8421504;
+            FeetColor = 4210752;
+            Weapon = WEAPON_HAMMER;
+            break;
+        case TYPE_STALKER:
+            pSkin = "pinky";
+            pClan = "潜追";
+            BodyColor = 16711935;
+            FeetColor = 8388736;
+            Weapon = WEAPON_NINJA;
+            break;
+        default:
+            break;
+        }
     }
 
-    switch (m_Type)
-    {
-    case TYPE_PULLHANDLE:
-        {
-            for(int i = 0; i < ENTITY_NUM; i ++)
-            {
-                CNetObj_Pickup *pObj = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aIDs[i], sizeof(CNetObj_Pickup)));
-                if(!pObj)
-                    return;
+    CNetObj_ClientInfo *pClientInfo = static_cast<CNetObj_ClientInfo *>(Server()->SnapNewItem(NETOBJTYPE_CLIENTINFO, ClientID, sizeof(CNetObj_ClientInfo)));
+    if(!pClientInfo)
+        return;
 
-                pObj->m_X = (int)m_aSnapPos[i].x;
-                pObj->m_Y = (int)m_aSnapPos[i].y;
-                pObj->m_Type = POWERUP_WEAPON;
-                pObj->m_Subtype = WEAPON_HAMMER;
-            }
-        }
-        break;
-    
-    case TYPE_SATIETY:
-        {
-            for(int i = 0; i < ENTITY_NUM; i ++)
-            {
-                CNetObj_Pickup *pObj = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aIDs[i], sizeof(CNetObj_Pickup)));
-                if(!pObj)
-                    return;
+    StrToInts(&pClientInfo->m_Name0, 4, pName);
+    StrToInts(&pClientInfo->m_Skin0, 6, pSkin);
+    StrToInts(&pClientInfo->m_Clan0, 3, pClan);
+    pClientInfo->m_Country = -1;
+    pClientInfo->m_UseCustomColor = 1;
+    pClientInfo->m_ColorBody = BodyColor;
+    pClientInfo->m_ColorFeet = FeetColor;
 
-                pObj->m_X = (int)m_aSnapPos[i].x;
-                pObj->m_Y = (int)m_aSnapPos[i].y;
-                pObj->m_Type = POWERUP_WEAPON;
-                pObj->m_Subtype = Server()->Tick()%25 == 0 ? rand()%NUM_WEAPONS : WEAPON_NINJA;
-            }
-        }
-        break;
+    CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, ClientID, sizeof(CNetObj_PlayerInfo)));
+    if(!pPlayerInfo)
+        return;
 
-    case TYPE_LEEK_BOX:
-        {
-            for(int i = 0; i < ENTITY_NUM; i ++)
-            {
-                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
-                if(!pObj)
-                    return;
+    pPlayerInfo->m_Local = 0;
+    pPlayerInfo->m_ClientID = ClientID;
+    pPlayerInfo->m_Team = TEAM_RED;
+    pPlayerInfo->m_Score = GetLifes();
+    pPlayerInfo->m_Latency = 0;
 
-                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
-                pObj->m_X = (int)m_aSnapPos[i].x;
-                pObj->m_Y = (int)m_aSnapPos[i].y;
-                pObj->m_FromX = (int)m_aSnapPos[Pos1].x;
-                pObj->m_FromY = (int)m_aSnapPos[Pos1].y;
-                pObj->m_StartTick = Server()->Tick() - m_DieTick + 1;
-            }
-        }
-        break;
+    CNetObj_Character *pCharacter = static_cast<CNetObj_Character *>(Server()->SnapNewItem(NETOBJTYPE_CHARACTER, ClientID, sizeof(CNetObj_Character)));
+    if(!pCharacter)
+        return;
 
-    case TYPE_BUG:
-        {
-            for(int i = 0; i < ENTITY_NUM; i ++)
-            {
-                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
-                if(!pObj)
-                    return;
+    pCharacter->m_Tick = 0;
+    pCharacter->m_X = (int)m_Pos.x;
+    pCharacter->m_Y = (int)m_Pos.y;
+    pCharacter->m_VelX = (int)(m_Core.m_Vel.x * 256.0f);
+    pCharacter->m_VelY = (int)(m_Core.m_Vel.y * 256.0f);
+    pCharacter->m_HookState = m_Core.m_HookState;
+    pCharacter->m_HookTick = m_Core.m_HookTick;
+    pCharacter->m_HookX = (int)m_Core.m_HookPos.x;
+    pCharacter->m_HookY = (int)m_Core.m_HookPos.y;
+    pCharacter->m_HookDx = (int)(m_Core.m_HookDir.x * 256.0f);
+    pCharacter->m_HookDy = (int)(m_Core.m_HookDir.y * 256.0f);
+    pCharacter->m_HookedPlayer = m_Core.m_HookedPlayer;
+    pCharacter->m_Jumped = m_Core.m_Jumped;
+    pCharacter->m_Direction = m_Path.m_Direction;
 
-                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
-                pObj->m_X = (int)m_aSnapPos[i].x+12;
-                pObj->m_Y = (int)m_aSnapPos[i].y+12;
-                pObj->m_FromX = (int)m_aSnapPos[Pos1].x+12;
-                pObj->m_FromY = (int)m_aSnapPos[Pos1].y+12;
-                pObj->m_StartTick = Server()->Tick() - 10;
-            }
-        }
-        break;
+    vec2 AimDir = vec2((float)m_Path.m_Direction, -1.f);
+    if(length(m_Core.m_Vel) > 0.01f)
+        AimDir = normalize(m_Core.m_Vel);
+    else if(m_Path.m_Direction == 0)
+        AimDir = vec2(1.f, 0.f);
+    pCharacter->m_Angle = (int)(GetAngle(normalize(AimDir)) * 256.0f);
 
-    case TYPE_FEAR:
-        {
-            for(int i = 0; i < ENTITY_NUM; i ++)
-            {
-                CNetObj_Laser *pObj = static_cast<CNetObj_Laser *>(Server()->SnapNewItem(NETOBJTYPE_LASER, m_aIDs[i], sizeof(CNetObj_Laser)));
-                if(!pObj)
-                    return;
+    pCharacter->m_PlayerFlags = 0;
+    pCharacter->m_Health = m_Health;
+    pCharacter->m_Armor = m_Armor;
+    pCharacter->m_AmmoCount = 0;
+    pCharacter->m_Weapon = Weapon;
+    pCharacter->m_AttackTick = 0;
 
-                int Pos1 = ((i + 1) >= ENTITY_NUM) ? 0 : (i + 1);
-                pObj->m_X = (int)m_aSnapPos[i].x + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
-                pObj->m_Y = (int)m_aSnapPos[i].y + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
-                pObj->m_FromX = (int)m_aSnapPos[Pos1].x + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
-                pObj->m_FromY = (int)m_aSnapPos[Pos1].y + (Server()->Tick() % 10 == 0 ? (rand()%32 - 16 + 12) : 0);
-                pObj->m_StartTick = Server()->Tick() - m_DieTick + 1;
-            }
-        }
-        break;
-    
-    default:
-        break;
-    }
+    if(m_Freeze)
+        pCharacter->m_Emote = EMOTE_SURPRISE;
+    else if(m_Type == TYPE_FEAR && IsSeenByAnyPlayer())
+        pCharacter->m_Emote = EMOTE_BLINK;
+    else if(Server()->Tick() - m_DamageTakenTick < Server()->TickSpeed() / 2)
+        pCharacter->m_Emote = EMOTE_PAIN;
+    else if(m_Type == TYPE_FEAR)
+        pCharacter->m_Emote = EMOTE_ANGRY;
+    else
+        pCharacter->m_Emote = EMOTE_NORMAL;
 }

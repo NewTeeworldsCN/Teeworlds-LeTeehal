@@ -30,7 +30,25 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_ItemCount = 0;
 	m_VoteStarted = false;
 
+	m_TerminalMenuOpen = false;
+	m_TerminalMenuToggleTick = 0;
+	m_TerminalMenuSelection = 0;
+	m_TerminalMenuTextScroll = 0;
+	m_TerminalMenuPage = 0;
+	m_TerminalMenuInputWarmup = false;
+	m_TerminalMenuFireBlock = false;
+	mem_zero(&m_TerminalMenuPrevInput, sizeof(m_TerminalMenuPrevInput));
+	m_TerminalMenuMotdTick = 0;
+	m_TerminalMenuIgnoreHookUntilTick = 0;
+	m_LastMenuVoteKey = 0;
+	m_LcOnboarded = false;
+	m_LcExpeditionParticipant = false;
+	m_TerminalWelcomePending = false;
+	m_aTerminalMotd[0] = 0;
+
 	m_AddedWeight = 0;
+	m_Hand = 0;
+	m_ScrapValueBonusPercent = 100;
 }
 
 CPlayer::~CPlayer()
@@ -72,6 +90,10 @@ void CPlayer::Tick()
 			m_Latency.m_AccumMax = 0;
 		}
 	}
+
+	if(m_TerminalMenuOpen && !GameServer()->m_World.m_Paused &&
+		Server()->Tick() - m_TerminalMenuMotdTick >= 25)
+		GameServer()->RefreshTerminalMenu(m_ClientID);
 
 	if(!GameServer()->m_World.m_Paused)
 	{
@@ -185,7 +207,10 @@ void CPlayer::Snap(int SnappingClient)
 
 void CPlayer::OnDisconnect(const char *pReason)
 {
-	KillCharacter();
+	const bool Persist = GameServer()->ShouldPersistPlayer(m_ClientID);
+	if(Persist)
+		GameServer()->PersistPlayer(m_ClientID);
+	KillCharacter(WEAPON_GAME, !Persist);
 
 	if(Server()->ClientIngame(m_ClientID))
 	{
@@ -203,9 +228,32 @@ void CPlayer::OnDisconnect(const char *pReason)
 
 void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 {
-	// skip the input if chat is active
 	if((m_PlayerFlags&PLAYERFLAG_CHATTING) && (NewInput->m_PlayerFlags&PLAYERFLAG_CHATTING))
 		return;
+
+	if(m_TerminalMenuOpen)
+	{
+		if(m_TerminalMenuInputWarmup)
+		{
+			m_TerminalMenuPrevInput = *NewInput;
+			m_TerminalMenuInputWarmup = false;
+		}
+		else
+		{
+			GameServer()->HandleTerminalMenuInput(m_ClientID, NewInput, &m_TerminalMenuPrevInput);
+			m_TerminalMenuPrevInput = *NewInput;
+		}
+		return;
+	}
+
+	if(m_TerminalMenuFireBlock)
+	{
+		if(m_pCharacter)
+			m_pCharacter->OnPredictedInput(NewInput);
+		if((NewInput->m_Fire & 1) == 0)
+			m_TerminalMenuFireBlock = false;
+		return;
+	}
 
 	if(m_pCharacter)
 		m_pCharacter->OnPredictedInput(NewInput);
@@ -225,6 +273,24 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 
 		m_PlayerFlags = NewInput->m_PlayerFlags;
  		return;
+	}
+
+	if(m_TerminalMenuOpen)
+	{
+		m_PlayerFlags = NewInput->m_PlayerFlags;
+		if(m_pCharacter)
+			m_pCharacter->ResetInput();
+		return;
+	}
+
+	if(m_TerminalMenuFireBlock)
+	{
+		m_PlayerFlags = NewInput->m_PlayerFlags;
+		if(m_pCharacter)
+			m_pCharacter->SyncDirectInput(NewInput);
+		if((NewInput->m_Fire & 1) == 0)
+			m_TerminalMenuFireBlock = false;
+		return;
 	}
 
 	m_PlayerFlags = NewInput->m_PlayerFlags;
@@ -253,11 +319,11 @@ CCharacter *CPlayer::GetCharacter()
 	return 0;
 }
 
-void CPlayer::KillCharacter(int Weapon)
+void CPlayer::KillCharacter(int Weapon, bool DropScrap)
 {
 	if(m_pCharacter)
 	{
-		m_pCharacter->Die(m_ClientID, Weapon);
+		m_pCharacter->Die(m_ClientID, Weapon, DropScrap);
 		delete m_pCharacter;
 		m_pCharacter = 0;
 	}
@@ -308,6 +374,9 @@ void CPlayer::TryRespawn()
 	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	m_pCharacter->Spawn(this, SpawnPos);
 	GameServer()->CreatePlayerSpawn(SpawnPos);
+	GameServer()->FinishPersistedRestore(m_ClientID);
+	if(GameServer()->Server()->m_LocateGame == LOCATE_GAME)
+		GameServer()->ApplyExpeditionBonuses(m_ClientID);
 }
 
 const char* CPlayer::GetLanguage()
@@ -357,6 +426,24 @@ void CPlayer::EraseScrap(int ID)
 			m_vScraps.remove(m_vScraps[i]);
 	}
 	GameServer()->ResetVotes(GetCID());
+}
+
+int CPlayer::GetBackpackValue() const
+{
+	int Value = 0;
+	for(int i = 0; i < m_vScraps.size(); i++)
+		if(m_vScraps[i])
+			Value += m_vScraps[i]->m_Value;
+	return Value;
+}
+
+int CPlayer::GetBackpackWeight() const
+{
+	int Weight = 0;
+	for(int i = 0; i < m_vScraps.size(); i++)
+		if(m_vScraps[i])
+			Weight += m_vScraps[i]->m_Weight;
+	return Weight;
 }
 
 void CPlayer::DropAllScrap(vec2 Pos, bool InShip)

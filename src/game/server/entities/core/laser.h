@@ -3,7 +3,7 @@
 #ifndef GAME_SERVER_ENTITIES_LASER_H
 #define GAME_SERVER_ENTITIES_LASER_H
 
-#include <game/server/entity.h>
+#include <game/server/core/entity.h>
 
 class CLaser : public CEntity
 {
@@ -16,7 +16,7 @@ public:
 	virtual void Snap(int SnappingClient);
 
 protected:
-	bool HitCharacter(vec2 From, vec2 To);
+	bool HitTarget(vec2 From, vec2 To);
 	void DoBounce();
 
 private:

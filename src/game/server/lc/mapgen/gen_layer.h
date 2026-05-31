@@ -88,9 +88,10 @@ public:
 
 	void GenerateFences();
 	void GenerateSlopes();
+	void GenerateSlopesLight();
 	void RemoveSingles();
 	void BaseCleanup();
-	void GenerateBoxes();
+	void GenerateBoxes(int MaxBoxes = -1);
 	void GeneratePlatforms();
 	void GenerateBackground();
 	void GenerateMoreBackground();

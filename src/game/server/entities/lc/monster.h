@@ -6,8 +6,10 @@
 #ifndef GAME_SERVER_ENTITIES_MONSTER_H
 #define GAME_SERVER_ENTITIES_MONSTER_H
 
-#include <game/server/entity.h>
+#include <game/server/core/entity.h>
 #include <game/generated/protocol.h>
+#include <engine/shared/protocol.h>
+#include <game/gamecore.h>
 
 enum
 {
@@ -15,22 +17,33 @@ enum
 	TYPE_SATIETY,
 	TYPE_LEEK_BOX,
 	TYPE_BUG,
-	NUM_MONSTER_TYPES,
 	TYPE_FEAR,
+	TYPE_HUNTER,
+	TYPE_BOMBER,
+	TYPE_LEECH,
+	TYPE_STALKER,
+	NUM_MONSTER_TYPES,
 };
+
+enum EMobilityType
+{
+	MOBILITY_GROUND = 0,
+	MOBILITY_HOOK,
+	MOBILITY_FLY,
+	MOBILITY_WALL,
+};
+
+class CCharacter;
 
 class CMonster : public CEntity
 {
-    enum
-    {
-        ENTITY_NUM = 3,
-        ENTITY_SPEED = 5,
-    };
 public:
 	//monster's size
 	static const int ms_PhysSize = 28;
 
-	CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor);
+	static int SnapClientID(int MonsterID) { return MAX_CLIENTS - MAX_MONSTERS + MonsterID; }
+
+	CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor, bool Boss = false);
 
 	virtual void Reset();
 	virtual void Tick();
@@ -61,16 +74,42 @@ public:
 	void ChangeDir();
 	void Spawn();
 	const char *MonsterName();
+	const char *MonsterDesc();
+	const char *MonsterDescShort();
 	void OnPredictedNinja();
+	void Stun(int Ticks);
+	bool IsAttackable() const { return !(m_Type == TYPE_BUG && m_Hidden); }
+	int MonsterType() const { return m_Type; }
+
+	void HandleMobility(CEntity *pVict);
+	bool NeedsMobilityAssist();
+	bool FindHookAnchor(vec2 Target, vec2 *pOutDir);
+	EMobilityType MobilityTypeFor(int Type) const;
     
     int GetLifes() { return m_Armor + m_Health; }
 	
 	int m_DieTick;
 	bool m_Freeze;
+	int m_FreezeUntilTick;
+	bool m_Hidden;
+	int m_GrassAmbushTick;
+	int m_StareAccum;
+	int m_LastCoilSoundTick;
+	int m_LastCoilStareBroadcastTick[MAX_CLIENTS];
+	int m_LastFireTick;
+	int m_LastHoardChatTick;
+	bool m_Exploded;
+	bool m_Boss;
+	int m_BossType;
+	bool m_BrackenTelegraphSent;
 
 private:
+	CCharacter *ClosestPlayer(vec2 Pos, float Radius);
+	CCharacter *HighestValuePlayer(vec2 Pos, float Radius);
+	bool IsSeenByPlayer(CCharacter *pChr);
+	bool IsSeenByAnyPlayer();
+	void HandleCoilheadStareBroadcast();
 
-	// weapon info
 	CEntity *m_apHitObjects[10];
 	int m_NumObjectsHit;
 	int m_ActiveWeapon;
@@ -95,13 +134,15 @@ private:
 
 	int m_Type;
 	int m_MonsterID;
+	EMobilityType m_Mobility;
+	bool m_MobilityHookActive;
+	bool m_MobilityFlyActive;
+	bool m_MobilityWallActive;
+	vec2 m_MobilityHookDir;
 
     bool m_WillFire;
     bool m_WillJump;
     bool m_WillHook;
-
-    int m_aIDs[ENTITY_NUM];
-    vec2 m_aSnapPos[ENTITY_NUM];
 
     vec2 m_Dir;
 

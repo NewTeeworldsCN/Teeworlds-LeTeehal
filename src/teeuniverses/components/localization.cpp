@@ -291,7 +291,7 @@ CLocalization::~CLocalization()
 /* BEGIN EDIT *********************************************************/
 bool CLocalization::InitConfig(int argc, const char** argv)
 {
-	m_Cfg_MainLanguage.copy("en");
+	m_Cfg_MainLanguage.copy("cn");
 	
 	return true;
 }
@@ -553,7 +553,7 @@ const char *CLocalization::LanguageCodeByCountryCode(int CountryCode)
 		case 156: //People’s Republic of China
 		case 344: //Hong Kong
 		case 446: //Macau
-			return "zh-Hans";
+			return "cn";
 		case 826: // United Kingdom of Great Britain and Northern Ireland
 		case 840: // United States of America
 			return "en";
@@ -573,7 +573,7 @@ const char *CLocalization::FallbackLanguageForIpCountryCode(int Country)
 	case 398: //Kazakhstan
 		return "ru";
 	default:
-		return "en";
+		return "cn";
 	}
 }
 
@@ -784,7 +784,12 @@ void CLocalization::Format_V(dynamic_string& Buffer, const char* pLanguageCode, 
 					if(str_comp_num(pText+ParamNameStart, pVarArgName, ParamNameLength) == 0)
 					{
 						//Get argument type
-						if(str_comp_num("str:", pText+ParamTypeStart, 4) == 0)
+						if(str_comp_num("lstr:", pText+ParamTypeStart, 5) == 0)
+						{
+							const char *pLocalized = pLanguage->Localize((const char*)pVarArgValue);
+							BufferIter = Buffer.append_at(BufferIter, pLocalized ? pLocalized : (const char*)pVarArgValue);
+						}
+						else if(str_comp_num("str:", pText+ParamTypeStart, 4) == 0)
 						{
 							BufferIter = Buffer.append_at(BufferIter, (const char*) pVarArgValue);
 						}

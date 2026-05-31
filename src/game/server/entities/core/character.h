@@ -3,7 +3,7 @@
 #ifndef GAME_SERVER_ENTITIES_CHARACTER_H
 #define GAME_SERVER_ENTITIES_CHARACTER_H
 
-#include <game/server/entity.h>
+#include <game/server/core/entity.h>
 #include <game/generated/server_data.h>
 #include <game/generated/protocol.h>
 
@@ -45,9 +45,14 @@ public:
 	void OnPredictedInput(CNetObj_PlayerInput *pNewInput);
 	void OnDirectInput(CNetObj_PlayerInput *pNewInput);
 	void ResetInput();
+	void SyncDirectInput(const CNetObj_PlayerInput *pNewInput);
 	void FireWeapon();
+	void TickVehicleWeapon();
+	const CNetObj_PlayerInput &GetInput() const { return m_Input; }
 
-	void Die(int Killer, int Weapon);
+	void Die(int Killer, int Weapon, bool DropScrap = true);
+	void HandleHazards();
+	void HandleCompass();
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
 
 	bool Spawn(class CPlayer *pPlayer, vec2 Pos);
@@ -66,6 +71,7 @@ public:
 
 	void PickupScrap();
 	void UpdateTuningParam();
+	bool TryReviveBy(int FromClient);
 
 	int m_HookMode;
 	bool m_InShip;
@@ -77,7 +83,20 @@ public:
 	int m_Armor;
 
 	int m_LeekTick;
+	int m_LastHazardWarnTick;
+	int m_LastHazardType;
+	int m_LastProximityWarnTick;
+	int m_LastCompassTick;
+	int m_LastFacilityRoomType;
+	int m_LastZoneBand;
+	int m_LastSpikeGridX;
+	int m_LastSpikeGridY;
+	int m_SpeedBoostUntilTick;
 	int m_CarriedBy;
+
+	bool m_OnVehicle;
+	int m_VehicleSeat;
+	int m_VehicleDismountTick;
 
 	bool m_Freeze;
 

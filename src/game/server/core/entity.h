@@ -5,7 +5,7 @@
 
 #include <new>
 #include <base/vmath.h>
-#include <game/server/gameworld.h>
+#include <game/server/core/gameworld.h>
 
 #include "alloc.h"
 

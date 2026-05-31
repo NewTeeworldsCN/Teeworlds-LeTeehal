@@ -4,15 +4,22 @@
 
 #include <engine/shared/config.h>
 
+#include <game/server/lc/expedition/moons.h>
+#include <game/server/lc/mapgen/mapgen_theme.h>
+
+#include <game/server/lc/mapgen/mapgen_random.h>
+
 #include <queue>
 
 #include "room.h"
 #include "maze.h"
+#include "gen_layer.h"
 
-CMaze::CMaze(int w, int h)
+CMaze::CMaze(int w, int h, int FacilityType)
 {
 	m_W = w;
 	m_H = h;
+	m_FacilityType = FacilityType;
 
 	m_aOpen = new bool[w * h];
 	m_aConnected = new bool[w * h];
@@ -23,7 +30,10 @@ CMaze::CMaze(int w, int h)
 		m_aConnected[i] = false;
 	}
 
-	Generate();
+	if(LcFacilityUsesGridLayout((ELcFacilityType)m_FacilityType))
+		GenerateGrid();
+	else
+		GenerateOrganic();
 }
 
 CMaze::~CMaze()
@@ -35,35 +45,86 @@ CMaze::~CMaze()
 		delete m_aConnected;
 }
 
-void CMaze::Generate()
+void CMaze::GenerateGrid()
 {
 	m_Rooms = 0;
 
-	int r = 250;
+	const int RoomW = 6;
+	const int RoomH = 6;
+	int GridStep = max(8, min(m_W, m_H) / 10);
+	GridStep = (GridStep / 2) * 2;
+	if(GridStep < 8)
+		GridStep = 8;
 
-	float s = 0.15f + frandom();
-	float sy = 0.4f;
+	int SpineX = ((m_W / 2) / 2) * 2;
+	int SpineY = ((m_H / 2) / 2) * 2;
 
-	Connect(vec2(m_W * (0.3f - s), m_H * (0.5f + s * sy)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * sy)));
-	Connect(vec2(m_W * (0.5f + s), m_H * (0.5f + s * sy)), vec2(m_W * (0.5f + s), m_H * (0.5f))); // W
+	Connect(vec2(2.f, (float)SpineY), vec2((float)(m_W - 2), (float)SpineY));
+	Connect(vec2((float)SpineX, 2.f), vec2((float)SpineX, (float)(m_H - 2)));
 
-	Connect(vec2(m_W * (0.35f - s), m_H * (0.5f)), vec2(m_W * (0.4f), m_H * (0.5f)));
-	Connect(vec2(m_W * (0.6f), m_H * (0.5f)), vec2(m_W * (0.65f + s), m_H * (0.5f)));
+	for(int gx = GridStep; gx < m_W - GridStep / 2 && m_Rooms < 900; gx += GridStep)
+	{
+		for(int gy = GridStep; gy < m_H - GridStep / 2 && m_Rooms < 900; gy += GridStep)
+		{
+			m_aRoom[m_Rooms++] = vec2((float)gx, (float)gy);
+			OpenRect(gx - RoomW / 2, gy - RoomH / 2, RoomW, RoomH);
+		}
+	}
 
-	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f - s * sy)), vec2(m_W * (0.5f + s), m_H * (0.5f - s * sy)));
-	Connect(vec2(m_W * (0.5f), m_H * (0.5f - s * sy)), vec2(m_W * (0.5f), m_H * (0.5f - s * sy * 2)));
-	Connect(vec2(m_W * (0.5f), m_H * (0.5f - s * sy * 2)), vec2(m_W * (0.6f + s), m_H * (0.5f - s * sy * 2)));
+	for(int r = 0; r < m_Rooms; r++)
+	{
+		vec2 p = m_aRoom[r];
+		Connect(p, vec2(p.x, (float)SpineY));
+		Connect(p, vec2((float)SpineX, p.y));
+	}
 
-	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f + s * sy * 2)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * sy * 2)));
+	ConnectEverything();
+	EnsureAccessibility();
+}
 
-	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f + s * sy * 3)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * sy * 3)));
+void CMaze::GenerateOrganic()
+{
+	m_Rooms = 0;
 
-	float x = 0.5f + (frandom() - frandom()) * 0.2f;
+	int r = m_W * m_H / 220;
+	if(r < 12)
+		r = 12;
+	if(r > 40)
+		r = 40;
+	if(m_FacilityType == LC_FACILITY_MINES)
+	{
+		r = m_W * m_H / 260;
+		if(r < 10)
+			r = 10;
+		if(r > 32)
+			r = 32;
+	}
 
-	Connect(vec2(m_W * (x - 0.15f - s), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x - 0.1f), m_H * (0.5f - s * sy * 3)));
-	Connect(vec2(m_W * (x + 0.1f), m_H * (0.5f - s * sy * 3)), vec2(m_W * (x + 0.15f + s), m_H * (0.5f - s * sy * 3)));
+	const SLcMapgenThemeProfile *pTheme = LcGetMapgenThemeProfile(g_Config.m_SvMapgenTheme);
+	if(pTheme && pTheme->m_OrganicRoomMul != 100)
+	{
+		r = r * pTheme->m_OrganicRoomMul / 100;
+		if(r < 8)
+			r = 8;
+	}
 
-	// create random rooms
+	float s = 0.14f;
+
+	Connect(vec2(m_W * (0.3f - s), m_H * (0.5f + s * 0.4f)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * 0.4f)));
+	Connect(vec2(m_W * (0.5f + s), m_H * (0.5f + s * 0.4f)), vec2(m_W * (0.5f + s), m_H * 0.5f));
+
+	Connect(vec2(m_W * (0.35f - s), m_H * 0.5f), vec2(m_W * 0.4f, m_H * 0.5f));
+	Connect(vec2(m_W * 0.6f, m_H * 0.5f), vec2(m_W * (0.65f + s), m_H * 0.5f));
+
+	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f - s * 0.4f)), vec2(m_W * (0.5f + s), m_H * (0.5f - s * 0.4f)));
+	Connect(vec2(m_W * 0.5f, m_H * (0.5f - s * 0.4f)), vec2(m_W * 0.5f, m_H * (0.5f - s * 0.8f)));
+	Connect(vec2(m_W * 0.5f, m_H * (0.5f - s * 0.8f)), vec2(m_W * (0.6f + s), m_H * (0.5f - s * 0.8f)));
+
+	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f + s * 0.8f)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * 0.8f)));
+	Connect(vec2(m_W * (0.5f - s), m_H * (0.5f + s * 1.2f)), vec2(m_W * (0.5f + s), m_H * (0.5f + s * 1.2f)));
+
+	Connect(vec2(m_W * 0.42f, m_H * (0.5f - s * 1.2f)), vec2(m_W * 0.58f, m_H * (0.5f - s * 1.2f)));
+
 	for (int i = 0; i < r; i++)
 		GenerateRoom();
 
@@ -74,13 +135,13 @@ void CMaze::Generate()
 
 void CMaze::GenerateLinear(int Width, int Rooms)
 {
-	float y = 0.3f + frandom() * 0.4f;
+	float y = 0.3f + MapGenRandomFloat() * 0.4f;
 	Connect(vec2(m_W * 0.5f - Width, m_H * y), vec2(m_W * 0.5f + Width, m_H * y));
 
 	if (Rooms > 0)
 	{
-		m_aRoom[m_Rooms++] = vec2(m_W * 0.5f - Width * frandom(), m_H * y);
-		m_aRoom[m_Rooms++] = vec2(m_W * 0.5f + Width * frandom(), m_H * y);
+		m_aRoom[m_Rooms++] = vec2(m_W * 0.5f - Width * MapGenRandomFloat(), m_H * y);
+		m_aRoom[m_Rooms++] = vec2(m_W * 0.5f + Width * MapGenRandomFloat(), m_H * y);
 
 		for (int i = 0; i < Rooms; i++)
 			GenerateRoom();
@@ -99,10 +160,10 @@ void CMaze::GenerateRoom(bool AutoConnect, bool MirrorMode)
 	while (!Valid && i++ < 2000)
 	{
 		Valid = true;
-		vec2 p = vec2(2 + frandom() * (m_W - 4), 2 + frandom() * (m_H - 4));
+		vec2 p = vec2(2 + MapGenRandomFloat() * (m_W - 4), 2 + MapGenRandomFloat() * (m_H - 4));
 
 		if (MirrorMode)
-			p = vec2(2 + frandom() * (m_W * 0.5f), 2 + frandom() * (m_H - 4));
+			p = vec2(2 + MapGenRandomFloat() * (m_W * 0.5f), 2 + MapGenRandomFloat() * (m_H - 4));
 
 		if (m_Rooms > 0)
 		{
@@ -116,10 +177,12 @@ void CMaze::GenerateRoom(bool AutoConnect, bool MirrorMode)
 					rp = m_aRoom[r];
 				}
 
-			if (fabs(p.x - rp.x) > 8 && fabs(p.y - rp.y) > 8)
+			if (fabs(p.x - rp.x) > 6 && fabs(p.y - rp.y) > 6)
 				Valid = false;
 
-			if (d < 20.0f || d > 60.0f) // || d > 40.0f)
+			float MinDist = max(6.0f, m_W * 0.08f);
+			float MaxDist = max(18.0f, m_W * 0.35f);
+			if (d < MinDist || d > MaxDist)
 				Valid = false;
 		}
 
@@ -129,9 +192,9 @@ void CMaze::GenerateRoom(bool AutoConnect, bool MirrorMode)
 				Connect(p, GetClosestRoom(p));
 
 			m_aRoom[m_Rooms] = p;
-			Open(m_aRoom[m_Rooms], 1 + rand() % 4);
+			Open(m_aRoom[m_Rooms], 1 + MapGenRand() % 4);
 
-			//	Connect(p, m_aRoom[rand()%m_Rooms]);
+			//	Connect(p, m_aRoom[MapGenRand()%m_Rooms]);
 
 			m_Rooms++;
 			return;
@@ -144,8 +207,8 @@ void CMaze::ConnectRandomRooms()
 	if (m_Rooms < 2)
 		return;
 
-	int r0 = rand() % (m_Rooms - 1);
-	int r1 = rand() % (m_Rooms - 1);
+	int r0 = MapGenRand() % (m_Rooms - 1);
+	int r1 = MapGenRand() % (m_Rooms - 1);
 
 	if (r0 != r1)
 		Connect(m_aRoom[r0], m_aRoom[r1]);
@@ -212,7 +275,7 @@ ivec2 CMaze::GetUnconnected()
 	// check random spots
 	while (Looping && i++ < 1000)
 	{
-		ivec2 p = ivec2(1 + rand() % (m_W - 2), 1 + rand() % (m_H - 2));
+		ivec2 p = ivec2(1 + MapGenRand() % (m_W - 2), 1 + MapGenRand() % (m_H - 2));
 		if (m_aOpen[p.x + p.y * m_W] && !m_aConnected[p.x + p.y * m_W])
 			return p;
 	}
@@ -316,21 +379,46 @@ void CMaze::Open(vec2 Pos, int Size)
 
 void CMaze::Open(int x, int y)
 {
-	// set pos within boundaries
-	x = max(1, x);
-	x = min(m_W - 1, x);
-	y = max(1, y);
-	y = min(m_H - 1, y);
+	// Keep a two-tile solid border at map edges.
+	x = max(2, x);
+	x = min(m_W - 3, x);
+	y = max(2, y);
+	y = min(m_H - 3, y);
 
 	m_aOpen[x + y * m_W] = true;
 }
 
-void CMaze::OpenRooms(CRoom *pRoom)
+void CMaze::OpenRooms(CRoom *pRoom, int OffX, int OffY)
 {
 	for (int x = 0; x < m_W; x++)
 		for (int y = 0; y < m_H; y++)
 			if (m_aOpen[x + y * m_W])
-				pRoom->Open(x, y);
+				pRoom->Open(x + OffX, y + OffY);
+}
+
+void CMaze::OpenRect(int x, int y, int w, int h)
+{
+	for(int py = y; py < y + h; py++)
+		for(int px = x; px < x + w; px++)
+			Open(px, py);
+}
+
+void CMaze::ConnectToFacility(vec2 From, vec2 To)
+{
+	Connect(From, To);
+	Open(From, 2);
+	Open(To, 2);
+}
+
+void CMaze::Carve(CGenLayer *pTiles) const
+{
+	if(!pTiles)
+		return;
+
+	for(int x = 2; x < m_W - 2; x++)
+		for(int y = 2; y < m_H - 2; y++)
+			if(m_aOpen[x + y * m_W])
+				pTiles->Set(0, x, y);
 }
 
 // Flood

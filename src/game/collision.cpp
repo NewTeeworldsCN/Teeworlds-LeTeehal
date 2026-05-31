@@ -11,6 +11,7 @@
 #include <game/mapitems.h>
 #include <game/layers.h>
 #include <game/collision.h>
+#include <game/server/lc/hazards/hazards.h>
 
 CCollision::CCollision()
 {
@@ -57,6 +58,67 @@ int CCollision::GetTile(int x, int y)
 	int Ny = clamp(y/32, 0, m_Height-1);
 
 	return m_pTiles[Ny*m_Width+Nx].m_Index > 128 ? 0 : m_pTiles[Ny*m_Width+Nx].m_Index;
+}
+
+int CCollision::GetTileReserved(int Tx, int Ty) const
+{
+	if(!m_pTiles || m_Width <= 0 || m_Height <= 0)
+		return 0;
+	int Nx = clamp(Tx, 0, m_Width - 1);
+	int Ny = clamp(Ty, 0, m_Height - 1);
+	return m_pTiles[Ny * m_Width + Nx].m_Reserved;
+}
+
+int CCollision::GetHazardAt(vec2 Pos) const
+{
+	int Reserved = GetTileReserved(round_to_int(Pos.x) / 32, round_to_int(Pos.y) / 32);
+	if(LcIsHazardReserved(Reserved))
+		return Reserved;
+	return 0;
+}
+
+int CCollision::GetHazardAtCharacter(vec2 Pos) const
+{
+	static const vec2 s_aSamples[] = {
+		vec2(0, 0),
+		vec2(0, 12),
+		vec2(-10, 6),
+		vec2(10, 6),
+		vec2(0, -4),
+	};
+	for(unsigned i = 0; i < sizeof(s_aSamples) / sizeof(s_aSamples[0]); i++)
+	{
+		int Hazard = GetHazardAt(Pos + s_aSamples[i]);
+		if(Hazard)
+			return Hazard;
+	}
+	return 0;
+}
+
+int CCollision::GetFacilityRoomAt(vec2 Pos) const
+{
+	int Reserved = GetTileReserved(round_to_int(Pos.x) / 32, round_to_int(Pos.y) / 32);
+	if(LcIsFacilityRoomReserved(Reserved))
+		return Reserved;
+	return 0;
+}
+
+void CCollision::ClearHazardAt(vec2 Pos)
+{
+	if(!m_pTiles)
+		return;
+	int Tx = round_to_int(Pos.x) / 32;
+	int Ty = round_to_int(Pos.y) / 32;
+	int Nx = clamp(Tx, 0, m_Width - 1);
+	int Ny = clamp(Ty, 0, m_Height - 1);
+	m_pTiles[Ny * m_Width + Nx].m_Reserved = 0;
+	m_pTiles[Ny * m_Width + Nx].m_Index = 0;
+
+	if(m_pLayers)
+	{
+		ModifTile(ivec2(Nx, Ny), m_pLayers->GetGameGroupIndex(), m_pLayers->GetDoodadsLayerIndex(), 0, 0, 0);
+		ModifTile(ivec2(Nx, Ny), m_pLayers->GetGameGroupIndex(), m_pLayers->GetForegroundLayerIndex(), 0, 0, 0);
+	}
 }
 
 bool CCollision::IsTileSolid(int x, int y)

@@ -374,6 +374,7 @@ set(DEP_PNGLITE $<TARGET_OBJECTS:pnglite>)
 ########################################################################
 
 file(COPY data DESTINATION .)
+file(COPY mapgen DESTINATION .)
 set(COPY_FILES
   ${FREETYPE_COPY_FILES}
   ${SDL_COPY_FILES}
@@ -650,7 +651,7 @@ set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${PROJECT_NAME})
 set(CPACK_TARGETS
   ${TARGET_SERVER}
 )
-set(CPACK_DIRS data)
+set(CPACK_DIRS data mapgen)
 set(CPACK_FILES
   license.txt
   storage.cfg

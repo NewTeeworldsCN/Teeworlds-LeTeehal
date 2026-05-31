@@ -3,7 +3,7 @@
 #ifndef GAME_SERVER_ENTITIES_SHIP_H
 #define GAME_SERVER_ENTITIES_SHIP_H
 
-#include <game/server/entity.h>
+#include <game/server/core/entity.h>
 
 class CShip : public CEntity
 {
@@ -20,7 +20,9 @@ public:
 	virtual void TickPaused();
 	virtual void Snap(int SnappingClient);
     
+    void RecalculateValue();
     void UpdateValue();
+    bool Contains(vec2 Pos) const;
     int GetValue() { return m_Value; }
     int GetNum() { return m_Num; }
 

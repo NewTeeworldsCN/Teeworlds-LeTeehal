@@ -2,13 +2,20 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
 #include <engine/shared/config.h>
-#include <game/server/gamecontext.h>
+#include <game/server/lc/expedition/balance.h>
+#include <game/server/lc/hazards/hazards.h>
+#include <game/server/core/gamecontext.h>
+#include <game/server/lc/ui/gameplay_ui.h>
+#include <game/collision.h>
 #include <game/mapitems.h>
 
 #include "character.h"
 #include "laser.h"
+#include "../lc/monster.h"
 #include "projectile.h"
-#include "ship.h"
+#include "../lc/ship.h"
+#include "../vehicle/vehicle_util.h"
+#include <engine/shared/protocol.h>
 
 //input count
 struct CInputCount
@@ -62,11 +69,25 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
 	m_InShip = false;
+	m_LastHazardWarnTick = 0;
+	m_LastHazardType = 0;
+	m_LastProximityWarnTick = 0;
+	m_LastCompassTick = 0;
+	m_LastFacilityRoomType = 0;
+	m_LastZoneBand = -1;
+	m_LastSpikeGridX = -100000;
+	m_LastSpikeGridY = -100000;
+	m_SpeedBoostUntilTick = 0;
+	m_OnVehicle = false;
+	m_VehicleSeat = VEHICLE_SEAT_NONE;
+	m_VehicleDismountTick = 0;
 
 	m_pPlayer = pPlayer;
 	if(Server()->GetClientSession(GetPlayer()->GetCID())->m_RoundId == GameServer()->m_pController->m_RoundId && Server()->m_LocateGame == LOCATE_GAME)
 	{
-		Pos = vec2(Server()->GetClientSession(GetPlayer()->GetCID())->m_X, Server()->GetClientSession(GetPlayer()->GetCID())->m_Y);
+		vec2 Saved = vec2(Server()->GetClientSession(GetPlayer()->GetCID())->m_X, Server()->GetClientSession(GetPlayer()->GetCID())->m_Y);
+		if(GameServer()->m_pController->IsSpawnSafe(Saved))
+			Pos = Saved;
 		m_Freeze = Server()->GetClientSession(GetPlayer()->GetCID())->m_Freeze;
 	}
 	m_Pos = Pos;
@@ -186,10 +207,16 @@ void CCharacter::HandleWeaponSwitch()
 
 void CCharacter::FireWeapon()
 {
+	if(m_pPlayer->m_TerminalMenuFireBlock)
+		return;
+
 	if(m_ReloadTimer != 0)
 		return;
 
 	if(m_Freeze)
+		return;
+
+	if(m_OnVehicle)
 		return;
 
 	DoWeaponSwitch();
@@ -246,6 +273,12 @@ void CCharacter::FireWeapon()
 				if ((pTarget == this) || GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, NULL, NULL))
 					continue;
 
+				if(pTarget->m_Freeze && pTarget->TryReviveBy(m_pPlayer->GetCID()))
+				{
+					Hits++;
+					continue;
+				}
+
 				// set his velocity to fast upward (for now)
 				if(length(pTarget->m_Pos-ProjStartPos) > 0.0f)
 					GameServer()->CreateHammerHit(pTarget->m_Pos-normalize(pTarget->m_Pos-ProjStartPos)*m_ProximityRadius*0.5f);
@@ -264,6 +297,37 @@ void CCharacter::FireWeapon()
 
 				pTarget->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f, D,
 					m_pPlayer->GetCID(), m_ActiveWeapon);
+				Hits++;
+			}
+
+			CMonster *apMonsters[MAX_MONSTERS];
+			int NumMonsters = GameServer()->m_World.FindEntities(ProjStartPos, m_ProximityRadius*0.5f, (CEntity**)apMonsters,
+				MAX_MONSTERS, CGameWorld::ENTTYPE_MONSTER);
+			for(int i = 0; i < NumMonsters; ++i)
+			{
+				CMonster *pTarget = apMonsters[i];
+				if(!GameServer()->PlayerCanDamageMonster(pTarget))
+					continue;
+				if(GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, NULL, NULL))
+					continue;
+
+				if(length(pTarget->m_Pos-ProjStartPos) > 0.0f)
+					GameServer()->CreateHammerHit(pTarget->m_Pos-normalize(pTarget->m_Pos-ProjStartPos)*m_ProximityRadius*0.5f);
+				else
+					GameServer()->CreateHammerHit(ProjStartPos);
+
+				vec2 Dir;
+				if(length(pTarget->m_Pos - m_Pos) > 0.0f)
+					Dir = normalize(pTarget->m_Pos - m_Pos);
+				else
+					Dir = vec2(0.f, -1.f);
+
+				int D = GC_PLAYER_HAMMER_MONSTER_DMG;
+				if(GetPlayer()->m_Hand == SCRAP_L2_SIGN)
+					D += GC_PLAYER_SIGN_MONSTER_BONUS;
+
+				GameServer()->DamageMonsterFromPlayer(pTarget, m_pPlayer->GetCID(), m_ActiveWeapon, D,
+					vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f);
 				Hits++;
 			}
 
@@ -362,6 +426,33 @@ void CCharacter::FireWeapon()
 				Hits++;
 			}
 
+			CMonster *apMonsters[MAX_MONSTERS];
+			int NumMonsters = GameServer()->m_World.FindEntities(ProjStartPos, m_ProximityRadius*0.5f, (CEntity**)apMonsters,
+				MAX_MONSTERS, CGameWorld::ENTTYPE_MONSTER);
+			for(int i = 0; i < NumMonsters; ++i)
+			{
+				CMonster *pTarget = apMonsters[i];
+				if(!GameServer()->PlayerCanDamageMonster(pTarget))
+					continue;
+				if(GameServer()->Collision()->IntersectLine(ProjStartPos, pTarget->m_Pos, NULL, NULL))
+					continue;
+
+				if(length(pTarget->m_Pos-ProjStartPos) > 0.0f)
+					GameServer()->CreateHammerHit(pTarget->m_Pos-normalize(pTarget->m_Pos-ProjStartPos)*m_ProximityRadius*0.5f);
+				else
+					GameServer()->CreateHammerHit(ProjStartPos);
+
+				vec2 Dir;
+				if(length(pTarget->m_Pos - m_Pos) > 0.0f)
+					Dir = normalize(pTarget->m_Pos - m_Pos);
+				else
+					Dir = vec2(0.f, -1.f);
+
+				GameServer()->DamageMonsterFromPlayer(pTarget, m_pPlayer->GetCID(), m_ActiveWeapon, GC_PLAYER_NINJA_MONSTER_DMG,
+					vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f);
+				Hits++;
+			}
+
 			// if we Hit anything, we have to wait for the reload
 			if(Hits)
 				m_ReloadTimer = Server()->TickSpeed()/3;
@@ -377,6 +468,34 @@ void CCharacter::FireWeapon()
 
 	if(!m_ReloadTimer)
 		m_ReloadTimer = g_pData->m_Weapons.m_aId[m_ActiveWeapon].m_Firedelay * Server()->TickSpeed() / 1000;
+}
+
+void CCharacter::TickVehicleWeapon()
+{
+	if(!m_OnVehicle || m_Freeze || m_pPlayer->m_TerminalMenuFireBlock)
+		return;
+
+	if(m_ReloadTimer > 0)
+	{
+		m_ReloadTimer--;
+		return;
+	}
+
+	if(!(m_Input.m_Fire & 1))
+		return;
+
+	vec2 Direction = vec2(m_Input.m_TargetX, m_Input.m_TargetY);
+	if(length(Direction) < 0.001f)
+		return;
+	Direction = normalize(Direction);
+
+	vec2 ProjStartPos = m_Pos + Direction * (float)ms_PhysSize * 0.75f;
+	new CProjectile(GameWorld(), WEAPON_GUN, m_pPlayer->GetCID(), ProjStartPos, Direction,
+		(int)(Server()->TickSpeed() * GameServer()->Tuning()->m_GunLifetime),
+		1, 0, 0, -1, WEAPON_GUN);
+	GameServer()->CreateSound(m_Pos, SOUND_GUN_FIRE);
+	m_AttackTick = Server()->Tick();
+	m_ReloadTimer = g_pData->m_Weapons.m_aId[WEAPON_GUN].m_Firedelay * Server()->TickSpeed() / 1000;
 }
 
 void CCharacter::HandleWeapons()
@@ -494,8 +613,27 @@ void CCharacter::ResetInput()
 	m_LatestPrevInput = m_LatestInput = m_Input;
 }
 
+void CCharacter::SyncDirectInput(const CNetObj_PlayerInput *pNewInput)
+{
+	if(!pNewInput)
+		return;
+
+	m_LatestInput = *pNewInput;
+	if(m_LatestInput.m_TargetX == 0 && m_LatestInput.m_TargetY == 0)
+		m_LatestInput.m_TargetY = -1;
+	m_LatestPrevInput = m_LatestInput;
+}
+
 void CCharacter::Tick()
 {
+	if(m_OnVehicle)
+	{
+		UpdateTuningParam();
+		m_PrevInput = m_Input;
+		VehicleResetCharacterHook(this);
+		return;
+	}
+
 	UpdateTuningParam();
 
 	m_Core.m_Input = m_Input;
@@ -509,11 +647,16 @@ void CCharacter::Tick()
 	if(m_LeekTick > 0)
 	{
 		m_LeekTick--;
-		int Time = m_LeekTick/50;
-		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_REALTIME, _("[生命维持系统] 检测到生命危险！请立刻回到飞船!\n剩余时间: {sec:tick}"), "tick", &Time);
+		if(Server()->Tick() % Server()->TickSpeed() == 0)
+		{
+			int Time = m_LeekTick/50;
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, BROADCAST_DURATION_REALTIME, _("[生命维持系统] 检测到生命危险！请立刻回到飞船!\n剩余时间: {sec:tick}"), "tick", &Time);
+		}
 		if(m_LeekTick == 0)
 			Die(GetPlayer()->GetCID(), WEAPON_NINJA);
 	}
+	HandleHazards();
+	HandleCompass();
 	// handle Weapons
 	HandleWeapons();
 
@@ -525,7 +668,8 @@ void CCharacter::Tick()
 			IncreaseHealth(3);
 			m_Freeze = false;
 		}
-		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("你的生命危在旦夕，叫你的队友来救你\n(把你钩回飞船上)"));
+		else if(Server()->Tick() % (Server()->TickSpeed() * 3) == 0)
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("你的生命危在旦夕，叫你的队友来救你\n(把你钩回飞船上)"));
 	}
 	// Previnput
 	m_PrevInput = m_Input;
@@ -538,6 +682,18 @@ void CCharacter::Tick()
 
 void CCharacter::TickDefered()
 {
+	if(m_OnVehicle)
+	{
+		// Aircraft ticks after character; position is synced in CVehicle::Tick().
+		m_SendCore = m_Core;
+		m_ReckoningCore = m_Core;
+		m_ReckoningTick = Server()->Tick();
+		Server()->GetClientSession(GetPlayer()->GetCID())->m_X = m_Pos.x;
+		Server()->GetClientSession(GetPlayer()->GetCID())->m_Y = m_Pos.y;
+		Server()->GetClientSession(GetPlayer()->GetCID())->m_Freeze = m_Freeze;
+		return;
+	}
+
 	// advance the dummy
 	{
 		CCharacterCore::CParams CoreTickParams(&GameWorld()->m_Core.m_Tuning);
@@ -652,14 +808,145 @@ bool CCharacter::IncreaseArmor(int Amount)
 	return true;
 }
 
-void CCharacter::Die(int Killer, int Weapon)
+void CCharacter::Die(int Killer, int Weapon, bool DropScrap)
 {
+	VehicleOnCharacterDie(GameServer(), GetPlayer()->GetCID());
+
 	// a nice sound
 	GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
 
 	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
-	m_pPlayer->DropAllScrap(m_Pos, m_InShip);
+	int ScrapCount = m_pPlayer->m_vScraps.size();
+	if(DropScrap && ScrapCount > 0)
+		GameServer()->SendChatTarget(-1, _("{str:name} 倒下，掉落了 {int:count} 件废品"), "name", Server()->ClientName(m_pPlayer->GetCID()), "count", &ScrapCount);
+	if(DropScrap)
+	{
+		int Lost = m_pPlayer->GetBackpackValue();
+		LcRecordDeathLoss(GameServer(), m_pPlayer->GetCID(), Lost);
+		m_pPlayer->DropAllScrap(m_Pos, m_InShip);
+	}
+	LcRecordDeath(GameServer(), m_pPlayer->GetCID());
 	LCDie();
+}
+
+void CCharacter::HandleHazards()
+{
+	if(Server()->m_LocateGame != LOCATE_GAME || m_InShip || m_Freeze)
+		return;
+
+	CCollision *pCol = GameServer()->Collision();
+	int Hazard = pCol->GetHazardAtCharacter(m_Pos);
+	if(Hazard == 0 && (pCol->GetCollisionAt(m_Pos.x, m_Pos.y) & CCollision::COLFLAG_DEATH))
+		Hazard = LC_HAZARD_MINE;
+
+	if(Hazard != m_LastHazardType)
+	{
+		if(Hazard == LC_HAZARD_GAS)
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("【警告】你进入了毒气区域！"));
+		else if(Hazard == LC_HAZARD_SHOCK)
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("【警告】你进入了漏电区域！"));
+		else if(Hazard == LC_HAZARD_TAR)
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("【警告】你踏入了黏性焦油！"));
+		else if(Hazard == LC_HAZARD_MINE)
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("【警告】你进入了地雷区域！"));
+		m_LastHazardType = Hazard;
+	}
+	if(Hazard == LC_HAZARD_NONE)
+		m_LastHazardType = LC_HAZARD_NONE;
+
+	if(Hazard == LC_HAZARD_GAS)
+	{
+		if(Server()->Tick() % (GC_HAZARD_GAS_TICK_SEC * Server()->TickSpeed()) == 0)
+		{
+			TakeDamage(vec2(0, 0.3), GC_HAZARD_GAS_DAMAGE, GetPlayer()->GetCID(), WEAPON_NINJA);
+			if(Server()->Tick() - m_LastHazardWarnTick > Server()->TickSpeed() * 4)
+			{
+				m_LastHazardWarnTick = Server()->Tick();
+				GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("【毒气】吸入有害气体！"));
+			}
+		}
+	}
+	else if(Hazard == LC_HAZARD_SHOCK)
+	{
+		if(Server()->Tick() % (GC_HAZARD_SHOCK_TICK_SEC * Server()->TickSpeed()) == 0)
+		{
+			TakeDamage(vec2(0, 0.2), GC_HAZARD_SHOCK_DAMAGE, GetPlayer()->GetCID(), WEAPON_HAMMER);
+			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_SHORT);
+			if(Server()->Tick() - m_LastHazardWarnTick > Server()->TickSpeed() * 3)
+			{
+				m_LastHazardWarnTick = Server()->Tick();
+				GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, BROADCAST_DURATION_GAMEANNOUNCE, _("【漏电】触碰到带电地面！"));
+			}
+		}
+	}
+	else if(Hazard == LC_HAZARD_SPIKE)
+	{
+		int Gx = round_to_int(m_Pos.x) / 32;
+		int Gy = round_to_int(m_Pos.y) / 32;
+		if(Gx != m_LastSpikeGridX || Gy != m_LastSpikeGridY)
+		{
+			m_LastSpikeGridX = Gx;
+			m_LastSpikeGridY = Gy;
+			TakeDamage(vec2(0, 0.4), GC_HAZARD_SPIKE_DAMAGE, GetPlayer()->GetCID(), WEAPON_HAMMER);
+			GameServer()->CreateHammerHit(m_Pos);
+			GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("你踩中了尖刺陷阱！"));
+		}
+	}
+	else if(Hazard == LC_HAZARD_TAR)
+	{
+		// movement penalty handled in UpdateTuningParam
+	}
+	else if(Hazard == LC_HAZARD_MINE)
+	{
+		TakeDamage(vec2(0, 0.5), GC_HAZARD_MINE_DAMAGE, GetPlayer()->GetCID(), WEAPON_GRENADE);
+		pCol->ClearHazardAt(m_Pos);
+		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("你触发了地雷！"));
+		GameServer()->CreateSound(m_Pos, SOUND_GRENADE_EXPLODE);
+		GameServer()->CreateHammerHit(m_Pos);
+	}
+	else
+	{
+		m_LastSpikeGridX = -100000;
+		m_LastSpikeGridY = -100000;
+	}
+}
+
+static const char *LcCompassDir(vec2 From, vec2 To)
+{
+	vec2 D = To - From;
+	if(length(D) < 1.0f)
+		return _("近旁");
+	if(fabs(D.x) > fabs(D.y))
+		return D.x > 0 ? _("东方") : _("西方");
+	return D.y > 0 ? _("南方") : _("北方");
+}
+
+void CCharacter::HandleCompass()
+{
+	if(Server()->m_LocateGame != LOCATE_GAME || m_InShip || m_Freeze)
+		return;
+	if(!GameServer()->m_pController || !GameServer()->m_pController->m_pShip)
+		return;
+
+	vec2 Ship = GameServer()->m_pController->m_pShip->m_Pos;
+	float Dist = distance(m_Pos, Ship);
+	if(Dist < GC_SHIP_HINT_DIST)
+		return;
+	if(Server()->Tick() - m_LastCompassTick < Server()->TickSpeed() * GC_SHIP_COMPASS_SEC)
+		return;
+
+	m_LastCompassTick = Server()->Tick();
+	int Tiles = (int)(Dist / 32.0f);
+	if(g_Config.m_SvTimelimit > 0)
+	{
+		int LimitTicks = g_Config.m_SvTimelimit * Server()->TickSpeed() * 60 + GameServer()->m_pController->ExpeditionTimeBonusSec() * Server()->TickSpeed();
+		int RemainingTicks = LimitTicks - (Server()->Tick() - GameServer()->m_pController->RoundStartTick());
+		int RemainingSec = RemainingTicks > 0 ? RemainingTicks / Server()->TickSpeed() : 0;
+		const char *pAdvice = RemainingSec > 120 ? _("还可继续搜索") : _("建议现在返回飞船");
+		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, Server()->TickSpeed() * 2, _("【导航】着陆飞船在你{lstr:dir}边（约 {int:m} 格）| 班次剩余 {int:sec} 秒 | {lstr:advice}"), "dir", LcCompassDir(m_Pos, Ship), "m", &Tiles, "sec", &RemainingSec, "advice", pAdvice);
+	}
+	else
+		GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_INTERFACE, Server()->TickSpeed() * 2, _("【导航】着陆飞船在你{lstr:dir}边（约 {int:m} 格）"), "dir", LcCompassDir(m_Pos, Ship), "m", &Tiles);
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
@@ -766,7 +1053,16 @@ void CCharacter::Snap(int SnappingClient)
 		return;
 
 	// write down the m_Core
-	if(!m_ReckoningTick || GameServer()->m_World.m_Paused)
+	if(m_OnVehicle)
+	{
+		VehicleResetCharacterHook(this);
+		pCharacter->m_Tick = 0;
+		m_Core.Write(pCharacter);
+		pCharacter->m_HookState = HOOK_IDLE;
+		pCharacter->m_HookX = pCharacter->m_X;
+		pCharacter->m_HookY = pCharacter->m_Y;
+	}
+	else if(!m_ReckoningTick || GameServer()->m_World.m_Paused)
 	{
 		// no dead reckoning when paused because the client doesn't know
 		// how far to perform the reckoning
@@ -831,7 +1127,9 @@ void CCharacter::PickupScrap()
 					{
 						GameServer()->CreateHammerHit(pDrop->m_Pos);
 						int Value = pDrop->GetScrapValue();
-						GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{str:iname},价值{int:value}元"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value);
+						int Weight = pDrop->GetWeight();
+						int TotalWeight = GetPlayer()->GetBackpackWeight() + Weight;
+						GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{lstr:iname}，价值{int:value}元，重量{int:weight}镑（背包总重{int:total}镑）"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value, "weight", &Weight, "total", &TotalWeight);
 						pDrop->Reset();
                 	    return;
                 	}
@@ -867,10 +1165,42 @@ void CCharacter::UpdateTuningParam()
 		m_pPlayer->m_NextTuningParams.m_AirControlAccel = 0.0f;
 		m_pPlayer->m_NextTuningParams.m_HookLength = 0.0f;
 	}
+	if(m_OnVehicle)
+	{
+		m_pPlayer->m_NextTuningParams.m_HookLength = 0.0f;
+		m_pPlayer->m_NextTuningParams.m_HookFireSpeed = 0.0f;
+	}
+	if(m_SpeedBoostUntilTick > Server()->Tick())
+	{
+		m_pPlayer->m_NextTuningParams.m_GroundControlSpeed = m_pPlayer->m_NextTuningParams.m_GroundControlSpeed * 1.35f;
+		m_pPlayer->m_NextTuningParams.m_AirControlSpeed = m_pPlayer->m_NextTuningParams.m_AirControlSpeed * 1.35f;
+	}
+	if(Server()->m_LocateGame == LOCATE_GAME && !m_InShip && !m_Freeze)
+	{
+		if(GameServer()->Collision()->GetHazardAtCharacter(m_Pos) == LC_HAZARD_TAR)
+		{
+			m_pPlayer->m_NextTuningParams.m_GroundControlSpeed = m_pPlayer->m_NextTuningParams.m_GroundControlSpeed * 0.55f;
+			m_pPlayer->m_NextTuningParams.m_AirControlSpeed = m_pPlayer->m_NextTuningParams.m_AirControlSpeed * 0.55f;
+		}
+	}
 }
 
 void CCharacter::LCDie()
 {
 	m_Freeze = true;
-	GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("[生命维持系统]警告! 生命维持系统已损坏!"));
+	GameServer()->SendBroadcast(GetPlayer()->GetCID(), BROADCAST_PRIORITY_EFFECTSTATE, Server()->TickSpeed() * 2, _("[生命维持系统]警告! 生命维持系统已损坏!"));
+}
+
+bool CCharacter::TryReviveBy(int FromClient)
+{
+	if(!m_Freeze)
+		return false;
+
+	m_Freeze = false;
+	m_Health = 1;
+	IncreaseHealth(4);
+	Server()->GetClientSession(GetPlayer()->GetCID())->m_Freeze = false;
+	LcRecordRevive(GameServer(), FromClient, GetPlayer()->GetCID());
+	GameServer()->SendChatTarget(-1, _("{str:helper} 救活了 {str:name}"), "helper", Server()->ClientName(FromClient), "name", Server()->ClientName(GetPlayer()->GetCID()));
+	return true;
 }
