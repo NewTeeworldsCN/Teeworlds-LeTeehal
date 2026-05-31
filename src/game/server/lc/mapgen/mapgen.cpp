@@ -926,13 +926,19 @@ void CMapGen::PlaceHazards(CGenLayer *pTiles, int FacilityType, ivec2 ShipPos, i
 				}
 			break;
 		case LC_HAZARD_MINE:
+			ModifTile(HPos, Dd, LC_TILE_DOODAD_MINE, 0, 0);
+			ModifTile(HPos, Fg, LC_TILE_FG_MINE, 0, 0);
 			break;
 		case LC_HAZARD_GRASS:
 			ModifTile(HPos, Dd, LC_TILE_DOODAD_GRASS, 0, 0);
 			break;
 		case LC_HAZARD_SHOCK:
+			ModifTile(HPos, Dd, LC_TILE_DOODAD_SHOCK, 0, 0);
+			ModifTile(HPos, Fg, LC_TILE_FG_SHOCK, 0, 0);
 			break;
 		case LC_HAZARD_SPIKE:
+			ModifTile(HPos, Fg, LC_TILE_FG_SPIKE, 0, 0);
+			ModifTile(HPos, Dd, LC_TILE_DOODAD_WARN, 0, 0);
 			break;
 		case LC_HAZARD_TAR:
 			ModifTile(HPos, Dd, LC_TILE_DOODAD_TAR, 0, 0);
@@ -1030,16 +1036,16 @@ void CMapGen::PlaceTurrets(CGenLayer *pTiles, int FacilityType, ivec2 ShipPos, i
 	int Fg = m_pLayers->GetForegroundLayerIndex();
 	int Dd = m_pLayers->GetDoodadsLayerIndex();
 
-	int Count = maximum(1, pTiles->Size() / 1100);
+	int Count = maximum(2, pTiles->Size() / 700);
 	if(FacilityType == LC_FACILITY_MINES)
-		Count += 2;
+		Count += 3;
 	else if(FacilityType == LC_FACILITY_RESEARCH)
-		Count += 1;
+		Count += 2;
 	else if(FacilityType == LC_FACILITY_MANSION || FacilityType == LC_FACILITY_WAREHOUSE)
-		Count = maximum(1, Count - 1);
+		Count = maximum(2, Count);
 
 	int Placed = 0;
-	for(int n = 0; n < Count * 10 && Placed < Count; n++)
+	for(int n = 0; n < Count * 16 && Placed < Count; n++)
 	{
 		ivec2 Pos = pTiles->GetOpenArea();
 		if(Pos.x == 0)
@@ -1052,10 +1058,7 @@ void CMapGen::PlaceTurrets(CGenLayer *pTiles, int FacilityType, ivec2 ShipPos, i
 		if(Pos.x < 3 || Pos.y < 3 || Pos.x >= w - 3 || Pos.y >= h - 3)
 			continue;
 
-		bool Valid = pTiles->Get(Pos.x, Pos.y) == 0 && !pTiles->Used(Pos.x, Pos.y);
-		if(Valid && !pTiles->Get(Pos.x, Pos.y + 1) && !pTiles->Get(Pos.x, Pos.y + 1, CGenLayer::FGOBJECTS))
-			Valid = false;
-		if(!Valid)
+		if(pTiles->Get(Pos.x, Pos.y) != 0 || pTiles->Used(Pos.x, Pos.y))
 			continue;
 
 		ModifTile(Pos, Game, ENTITY_OFFSET + ENTITY_TURRET, 0, 0);

@@ -69,4 +69,10 @@ void LcAddSettlementMvp(CGameContext *pGameServer);
 void LcFormatZoneLabel(char *pBuf, int Size, vec2 Pos, vec2 Ship);
 void LcLogStorePurchase(CGameContext *pGameServer, int ClientID, const char *pItem, int Cost);
 
+bool LcPlayerIsExpeditionSpectator(class CPlayer *pPlayer);
+bool LcPlayerCountsForStart(CGameContext *pGameServer, class CPlayer *pPlayer);
+void LcSetSpectatorOptIn(CGameContext *pGameServer, int ClientID, bool OptIn);
+void LcAddJoinRoleVoteOptions(CGameContext *pGameServer, int ClientID, class CPlayer *pPlayer);
+void LcAddJoinRoleTerminalActions(CLcTerminalMenu *pMenu, CGameContext *pGameServer, class CPlayer *pPlayer, CLocalization *pLoc, const char *pLang);
+
 #endif

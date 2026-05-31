@@ -173,11 +173,16 @@ void CTurret::Snap(int SnappingClient)
 	if(NetworkClipped(SnappingClient))
 		return;
 
-	const float Base = 14.f;
+	const float Pulse = 0.82f + 0.18f * (0.5f + 0.5f * sinf((Server()->Tick() % 40) / 40.f * 2.f * TURRET_PI));
+	const float Base = 14.f * Pulse;
 	SnapLaser(m_Pos + vec2(-Base, -Base), m_Pos + vec2(Base, -Base), SnappingClient);
 	SnapLaser(m_Pos + vec2(Base, -Base), m_Pos + vec2(Base, Base), SnappingClient);
 	SnapLaser(m_Pos + vec2(Base, Base), m_Pos + vec2(-Base, Base), SnappingClient);
 	SnapLaser(m_Pos + vec2(-Base, Base), m_Pos + vec2(-Base, -Base), SnappingClient);
+
+	const float Warn = 22.f * Pulse;
+	SnapLaser(m_Pos + vec2(-Warn, 0.f), m_Pos + vec2(Warn, 0.f), SnappingClient);
+	SnapLaser(m_Pos + vec2(0.f, -Warn), m_Pos + vec2(0.f, Warn), SnappingClient);
 
 	vec2 BarrelEnd = m_Pos + m_AimDir * 52.f;
 	SnapLaser(m_Pos + m_AimDir * 8.f, BarrelEnd, SnappingClient);

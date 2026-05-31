@@ -137,6 +137,7 @@ public:
 
 	bool m_LcOnboarded;
 	bool m_LcExpeditionParticipant;
+	bool m_LcSpectatorOptIn;
 	bool m_TerminalWelcomePending;
 	char m_aTerminalMotd[1200];
 

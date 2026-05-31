@@ -20,6 +20,7 @@
 #include "../lc/expedition/moons.h"
 #include "../lc/ui/guide.h"
 #include "../lc/ui/gameplay_ui.h"
+#include "../lc/ui/terminal_menu.h"
 #include "../lc/economy/company_stats.h"
 #include "../lc/ui/terminal_actions.h"
 #include "../scrap/scrap_info.h"
@@ -77,6 +78,7 @@ void CGameContext::Construct(int Resetting)
 		m_aNextFlashBonus[i] = 0;
 		m_aStoreBonus[i].Reset();
 		m_aAircraftStock[i] = 0;
+		m_aLcSpectatorOptIn[i] = false;
 	}
 	m_ConsoleOutputHandle_ChatPrint = -1;
 	m_ConsoleOutput_Target = -1;
@@ -123,6 +125,7 @@ void CGameContext::Clear()
 	int aNextArmorBonus[MAX_CLIENTS];
 	int aNextFlashBonus[MAX_CLIENTS];
 	int aAircraftStock[MAX_CLIENTS];
+	bool aLcSpectatorOptIn[MAX_CLIENTS];
 	int NextExpeditionTimeBonusSec = m_NextExpeditionTimeBonusSec;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -130,6 +133,9 @@ void CGameContext::Clear()
 		aNextArmorBonus[i] = m_aNextArmorBonus[i];
 		aNextFlashBonus[i] = m_aNextFlashBonus[i];
 		aAircraftStock[i] = m_aAircraftStock[i];
+		aLcSpectatorOptIn[i] = m_aLcSpectatorOptIn[i];
+		if(m_apPlayers[i])
+			aLcSpectatorOptIn[i] = m_apPlayers[i]->m_LcSpectatorOptIn;
 	}
 
 	m_Resetting = true;
@@ -149,6 +155,7 @@ void CGameContext::Clear()
 		m_aNextArmorBonus[i] = aNextArmorBonus[i];
 		m_aNextFlashBonus[i] = aNextFlashBonus[i];
 		m_aAircraftStock[i] = aAircraftStock[i];
+		m_aLcSpectatorOptIn[i] = aLcSpectatorOptIn[i];
 		m_aBroadcastStates[i].m_NoChangeTick = 0;
 		m_aBroadcastStates[i].m_LifeSpanTick = 0;
 		m_aBroadcastStates[i].m_Priority = BROADCAST_PRIORITY_LOWEST;
@@ -690,7 +697,8 @@ void CGameContext::OnClientEnter(int ClientID)
 	{
 		RestorePersistedPlayer(ClientID);
 	}
-	else if(Server()->m_LocateGame == LOCATE_GAME && m_pController && m_pController->m_pShip)
+	else if(Server()->m_LocateGame == LOCATE_GAME && m_pController && m_pController->m_pShip &&
+		!m_apPlayers[ClientID]->m_LcSpectatorOptIn)
 	{
 		vec2 SpawnPos = m_pController->m_pShip->m_Pos;
 		m_pController->GetSafeSpawnNear(SpawnPos, &SpawnPos, 480.0f);
@@ -699,9 +707,17 @@ void CGameContext::OnClientEnter(int ClientID)
 		Server()->GetClientSession(ClientID)->m_RoundId = m_pController->m_RoundId;
 	}
 
-	m_apPlayers[ClientID]->Respawn();
+	if(Server()->m_LocateGame == LOCATE_GAME && m_apPlayers[ClientID]->m_LcSpectatorOptIn)
+	{
+		m_apPlayers[ClientID]->SetTeam(TEAM_SPECTATORS);
+		m_apPlayers[ClientID]->m_LcExpeditionParticipant = false;
+		SendChatTarget(ClientID, _("本班次你以旁观者身份观看"));
+	}
+	else
+		m_apPlayers[ClientID]->Respawn();
 
-	if(Server()->m_LocateGame == LOCATE_GAME && HasPendingExpeditionBonus(ClientID))
+	if(Server()->m_LocateGame == LOCATE_GAME && HasPendingExpeditionBonus(ClientID) &&
+		!LcPlayerIsExpeditionSpectator(m_apPlayers[ClientID]))
 		ApplyExpeditionBonuses(ClientID);
 
 	char aBuf[512];
@@ -729,7 +745,8 @@ void CGameContext::OnClientEnter(int ClientID)
 	else if(Server()->m_LocateGame == LOCATE_GAME && m_pController &&
 		m_pController->ExpeditionPhase() == LC_PHASE_EXPEDITION &&
 		m_pController->m_PrepareTick < 0 &&
-		!m_apPlayers[ClientID]->m_LcExpeditionParticipant)
+		!m_apPlayers[ClientID]->m_LcExpeditionParticipant &&
+		!LcPlayerIsExpeditionSpectator(m_apPlayers[ClientID]))
 	{
 		LcSendMidJoinBriefing(this, ClientID);
 		m_apPlayers[ClientID]->m_LcExpeditionParticipant = true;
@@ -747,6 +764,7 @@ void CGameContext::OnClientConnected(int ClientID)
 		return;
 
 	m_apPlayers[ClientID] = new(ClientID) CPlayer(this, ClientID, StartTeam);
+	m_apPlayers[ClientID]->m_LcSpectatorOptIn = m_aLcSpectatorOptIn[ClientID];
 
 	// send active vote
 	if(m_VoteCloseTime)
@@ -999,7 +1017,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				CNetMsg_Cl_Vote *pMsg = (CNetMsg_Cl_Vote *)pRawMsg;
 				if(pMsg->m_Vote == 1)
 				{
-					if(pPlayer->m_LastMenuVoteKey != 1)
+					if(pPlayer->m_TerminalMenuOpen)
+						pPlayer->m_LastMenuVoteKey = 1;
+					else if(pPlayer->m_LastMenuVoteKey != 1)
 					{
 						ToggleTerminalMenu(ClientID);
 						pPlayer->m_LastMenuVoteKey = 1;
@@ -2475,7 +2495,14 @@ void CGameContext::CreateScanLink(vec2 From, vec2 To)
 void CGameContext::OpenTerminalGuidePage(int ClientID, int Page)
 {
 	CPlayer *pPlayer = m_apPlayers[ClientID];
-	if(!pPlayer || !pPlayer->GetCharacter() || pPlayer->GetCharacter()->m_Freeze)
+	if(!pPlayer)
+		return;
+	if(pPlayer->GetCharacter() && pPlayer->GetCharacter()->m_Freeze)
+	{
+		SendChatTarget(ClientID, _("☪ 死人无法操作"));
+		return;
+	}
+	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY && !LcPlayerIsExpeditionSpectator(pPlayer))
 	{
 		SendChatTarget(ClientID, _("☪ 死人无法操作"));
 		return;
@@ -2495,8 +2522,26 @@ bool CGameContext::ExecutePlayerVoteCommand(int ClientID, const char *pCmd, cons
 	if(!pCmd || !pCmd[0] || !m_apPlayers[ClientID])
 		return false;
 
+	if(str_comp(pCmd, "lc_spec") == 0)
+	{
+		LcSetSpectatorOptIn(this, ClientID, true);
+		return true;
+	}
+
+	if(str_comp(pCmd, "lc_play") == 0)
+	{
+		LcSetSpectatorOptIn(this, ClientID, false);
+		return true;
+	}
+
 	if(str_comp(pCmd, "qstart") == 0)
 	{
+		if(LcPlayerIsExpeditionSpectator(m_apPlayers[ClientID]) || m_apPlayers[ClientID]->m_LcSpectatorOptIn)
+		{
+			SendChatTarget(ClientID, _("旁观者无法投票出发或启动飞船"));
+			return true;
+		}
+
 		if(m_apPlayers[ClientID]->GetCharacter() && m_apPlayers[ClientID]->GetCharacter()->m_Freeze)
 		{
 			SendChatTarget(ClientID, _("☪ 死人无法操作"));
@@ -2657,7 +2702,7 @@ void CGameContext::ToggleTerminalMenu(int ClientID)
 	CPlayer *pPlayer = m_apPlayers[ClientID];
 	if(!pPlayer)
 		return;
-	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY)
+	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY && !LcPlayerIsExpeditionSpectator(pPlayer))
 		return;
 
 	if(Server()->Tick() < pPlayer->m_TerminalMenuToggleTick + Server()->TickSpeed() / 3)
@@ -2686,7 +2731,7 @@ void CGameContext::OpenTerminalMenu(int ClientID)
 		return;
 	}
 
-	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY)
+	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY && !LcPlayerIsExpeditionSpectator(pPlayer))
 		return;
 
 	if(pPlayer->m_TerminalWelcomePending)
@@ -2718,7 +2763,7 @@ void CGameContext::CloseTerminalMenu(int ClientID)
 	pPlayer->m_TerminalMenuSelection = 0;
 	pPlayer->m_TerminalMenuTextScroll = 0;
 	pPlayer->m_TerminalMenuInputWarmup = false;
-	pPlayer->m_TerminalMenuFireBlock = true;
+	pPlayer->m_TerminalMenuFireBlock = pPlayer->GetCharacter() != 0;
 	pPlayer->m_LastMenuVoteKey = 0;
 
 	if(pPlayer->GetCharacter())
@@ -2738,7 +2783,7 @@ void CGameContext::RefreshTerminalMenu(int ClientID)
 	if(!pPlayer || !pPlayer->m_TerminalMenuOpen)
 		return;
 
-	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY)
+	if(!pPlayer->GetCharacter() && Server()->m_LocateGame != LOCATE_LOBBY && !LcPlayerIsExpeditionSpectator(pPlayer))
 	{
 		CloseTerminalMenu(ClientID);
 		return;
@@ -2989,7 +3034,9 @@ void CGameContext::BuildFacilityMarkers()
 				continue;
 
 			float MarkerSize = 14.f;
-			if(Reserved == LC_HAZARD_GAS)
+			if(Reserved == LC_HAZARD_MINE)
+				MarkerSize = 18.f;
+			else if(Reserved == LC_HAZARD_GAS)
 			{
 				MarkerSize = 40.f;
 				if(x + 1 < pCol->GetWidth() && pCol->GetTileReserved(x + 1, y) == Reserved)
@@ -3325,6 +3372,8 @@ void CGameContext::Count()
 	for (int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(!GetPlayerChar(i))
+			continue;
+		if(!LcPlayerCountsForStart(this, m_apPlayers[i]))
 			continue;
 
 		m_CountInGame++;

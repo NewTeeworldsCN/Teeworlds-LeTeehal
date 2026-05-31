@@ -43,6 +43,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_LastMenuVoteKey = 0;
 	m_LcOnboarded = false;
 	m_LcExpeditionParticipant = false;
+	m_LcSpectatorOptIn = false;
 	m_TerminalWelcomePending = false;
 	m_aTerminalMotd[0] = 0;
 
@@ -246,10 +247,9 @@ void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 		return;
 	}
 
-	if(m_TerminalMenuFireBlock)
+	if(m_TerminalMenuFireBlock && m_pCharacter)
 	{
-		if(m_pCharacter)
-			m_pCharacter->OnPredictedInput(NewInput);
+		m_pCharacter->OnPredictedInput(NewInput);
 		if((NewInput->m_Fire & 1) == 0)
 			m_TerminalMenuFireBlock = false;
 		return;
@@ -283,11 +283,10 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 		return;
 	}
 
-	if(m_TerminalMenuFireBlock)
+	if(m_TerminalMenuFireBlock && m_pCharacter)
 	{
 		m_PlayerFlags = NewInput->m_PlayerFlags;
-		if(m_pCharacter)
-			m_pCharacter->SyncDirectInput(NewInput);
+		m_pCharacter->SyncDirectInput(NewInput);
 		if((NewInput->m_Fire & 1) == 0)
 			m_TerminalMenuFireBlock = false;
 		return;
@@ -340,6 +339,9 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	// clamp the team
 	Team = GameServer()->m_pController->ClampTeam(Team);
 	if(m_Team == Team)
+		return;
+
+	if(!GameServer()->m_pController->CanChangeTeam(this, Team))
 		return;
 
 	KillCharacter();

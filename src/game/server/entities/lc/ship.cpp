@@ -3,6 +3,7 @@
 #include <game/generated/protocol.h>
 #include <game/server/core/gamecontext.h>
 #include <game/server/lc/ui/gameplay_ui.h>
+#include <game/server/lc/expedition/balance.h>
 #include <engine/shared/config.h>
 
 #include "ship.h"
@@ -77,6 +78,58 @@ void CShip::Tick()
 bool CShip::Contains(vec2 Pos) const
 {
     return distancebox(vec2((float)m_Radius, (float)m_Radius), Pos, m_Pos);
+}
+
+bool CShip::Overlaps(vec2 Pos, float Margin) const
+{
+    vec2 Delta = Pos - m_Pos;
+    return fabs(Delta.x) < (float)m_Radius + Margin && fabs(Delta.y) < (float)m_Radius + Margin;
+}
+
+bool CShip::RepelEntity(vec2 *pPos, vec2 *pVel, float PhysRadius) const
+{
+    if(!pPos)
+        return false;
+
+    const float Margin = PhysRadius + GC_SHIP_MONSTER_REPEL_BUFFER;
+    vec2 Delta = *pPos - m_Pos;
+    float AbsX = fabs(Delta.x);
+    float AbsY = fabs(Delta.y);
+
+    if(AbsX >= (float)m_Radius + Margin || AbsY >= (float)m_Radius + Margin)
+        return false;
+
+    float OverX = (float)m_Radius + Margin - AbsX;
+    float OverY = (float)m_Radius + Margin - AbsY;
+    if(OverX <= 0.f || OverY <= 0.f)
+        return false;
+
+    vec2 Push(0.f, 0.f);
+    if(OverX < OverY)
+        Push.x = Delta.x >= 0.f ? OverX : -OverX;
+    else
+        Push.y = Delta.y >= 0.f ? OverY : -OverY;
+
+    *pPos += Push;
+
+    if(pVel)
+    {
+        vec2 Out = *pPos - m_Pos;
+        if(length(Out) > 0.01f)
+            Out = normalize(Out);
+        else if(length(Push) > 0.01f)
+            Out = normalize(Push);
+        else
+            Out = vec2(1.f, 0.f);
+
+        float Inward = dot(*pVel, -Out);
+        if(Inward > 0.f)
+            *pVel += Out * (Inward + GC_SHIP_MONSTER_BOUNCE);
+        else
+            *pVel += Out * (GC_SHIP_MONSTER_BOUNCE * 0.35f);
+    }
+
+    return true;
 }
 
 void CShip::RecalculateValue()

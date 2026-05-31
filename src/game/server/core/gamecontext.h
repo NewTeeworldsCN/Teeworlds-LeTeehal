@@ -355,6 +355,7 @@ public:
 
 	int m_CountInGame;
 	int m_CountAlive;
+	bool m_aLcSpectatorOptIn[MAX_CLIENTS];
 
 	void Count();
 };

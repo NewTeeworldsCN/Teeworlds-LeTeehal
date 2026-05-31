@@ -43,8 +43,12 @@ void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 			CCharacter *pChr = pGameServer->m_apPlayers[ClientID]->GetCharacter();
 			const bool InShip = pChr && pChr->m_InShip;
 			const bool Freeze = pChr && pChr->m_Freeze;
-
-			if(InShip)
+			if(LcPlayerIsExpeditionSpectator(pP))
+			{
+				pGameServer->AddVote(ClientID, "null", _("☪ 旁观中（本班次仅观看）"));
+				pGameServer->AddVote(ClientID, "help_monsters", _("☞ 怪物图鉴"));
+			}
+			else if(InShip)
 			{
 				if(pGameServer->m_pController && pGameServer->m_pController->m_pShip)
 					pGameServer->m_pController->m_pShip->RecalculateValue();
@@ -97,7 +101,7 @@ void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 				pGameServer->AddVote(ClientID, "null", _("理由为空 = 放下物品"));
 			}
 
-			if(!Freeze)
+			if(!Freeze && pChr)
 			{
 				int Lb = pP->m_AddedWeight;
 				int Value = 0;
@@ -161,6 +165,7 @@ void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 			pGameServer->AddVote(ClientID, "null", _("【公司飞船终端】"));
 			LcAddVoteLobbyNextSteps(pGameServer, ClientID);
 			pGameServer->AddVote(ClientID, "null", _("欢迎回来，员工。达成指标，否则将被解雇。"));
+			LcAddJoinRoleVoteOptions(pGameServer, ClientID, pP);
 			pGameServer->AddVote(ClientID, "null", _("---------------"));
 			int Rounds = g_Config.m_GcRounds;
 			int Days = g_Config.m_GcDays;
@@ -255,7 +260,9 @@ void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 			pGameServer->AddVote(ClientID, "moon 3", LcMoonRouteLabel(3));
 			pGameServer->AddVote(ClientID, "moon 4", LcMoonRouteLabel(4));
 			pGameServer->AddVote(ClientID, "null", _("---------------"));
-			if(pGameServer->m_CountInGame < g_Config.m_SvLessPlayerStart)
+			if(pP->m_LcSpectatorOptIn)
+				pGameServer->AddVote(ClientID, "null", _("旁观者不计入出发人数，也无法投票出发"));
+			else if(pGameServer->m_CountInGame < g_Config.m_SvLessPlayerStart)
 			{
 				int Need = g_Config.m_SvLessPlayerStart;
 				pGameServer->AddVote(ClientID, "null", _("需要至少 {int:need} 名员工才能出发"), "need", &Need);

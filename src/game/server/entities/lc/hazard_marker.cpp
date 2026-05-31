@@ -1,9 +1,13 @@
+#include <cmath>
+
 #include <game/generated/protocol.h>
 #include <game/gamecore.h>
 #include <game/collision.h>
 #include <game/server/core/gamecontext.h>
 #include <game/server/lc/hazards/hazards.h>
 #include "hazard_marker.h"
+
+static const float HAZARD_PI = 3.14159265f;
 
 CHazardMarker::CHazardMarker(CGameWorld *pGameWorld, vec2 Pos, int Reserved, float Size)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_PROJECTILE)
@@ -43,6 +47,15 @@ void CHazardMarker::Tick()
 
 void CHazardMarker::TickPaused()
 {
+}
+
+float CHazardMarker::PulseScale() const
+{
+	if(m_Reserved != LC_HAZARD_MINE && m_Reserved != LC_HAZARD_SHOCK && m_Reserved != LC_HAZARD_SPIKE)
+		return 1.f;
+
+	float Phase = (m_PulseTick % 30) / 30.f;
+	return 0.82f + 0.28f * (0.5f + 0.5f * sinf(Phase * 2.f * HAZARD_PI));
 }
 
 void CHazardMarker::SnapLaser(vec2 From, vec2 To, int SnappingClient)
@@ -92,7 +105,7 @@ void CHazardMarker::SnapProjectile(int SnappingClient)
 
 void CHazardMarker::SnapLaserFrame(int SnappingClient)
 {
-	float S = m_Size;
+	float S = m_Size * PulseScale();
 	if(LcIsFacilityRoomReserved(m_Reserved))
 		S = m_Size + 8.f;
 
@@ -101,7 +114,12 @@ void CHazardMarker::SnapLaserFrame(int SnappingClient)
 	SnapLaser(m_Center + vec2(S, S), m_Center + vec2(-S, S), SnappingClient);
 	SnapLaser(m_Center + vec2(-S, S), m_Center + vec2(-S, -S), SnappingClient);
 
-	if(m_Reserved == LC_HAZARD_GAS)
+	if(m_Reserved == LC_HAZARD_MINE)
+	{
+		SnapLaser(m_Center + vec2(-S * 0.7f, 0.f), m_Center + vec2(S * 0.7f, 0.f), SnappingClient);
+		SnapLaser(m_Center + vec2(0.f, -S * 0.7f), m_Center + vec2(0.f, S * 0.7f), SnappingClient);
+	}
+	else if(m_Reserved == LC_HAZARD_GAS)
 	{
 		SnapLaser(m_Center + vec2(-S * 0.5f, 0.f), m_Center + vec2(S * 0.5f, 0.f), SnappingClient);
 		SnapLaser(m_Center + vec2(0.f, -S * 0.5f), m_Center + vec2(0.f, S * 0.5f), SnappingClient);
@@ -110,9 +128,17 @@ void CHazardMarker::SnapLaserFrame(int SnappingClient)
 
 void CHazardMarker::Snap(int SnappingClient)
 {
+	if(m_Reserved == LC_HAZARD_MINE)
+	{
+		SnapProjectile(SnappingClient);
+		SnapLaserFrame(SnappingClient);
+		return;
+	}
+
 	if(LcHazardUsesProjectileSnap(m_Reserved))
 	{
 		SnapProjectile(SnappingClient);
+		SnapLaserFrame(SnappingClient);
 		return;
 	}
 

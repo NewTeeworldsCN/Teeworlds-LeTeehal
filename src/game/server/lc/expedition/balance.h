@@ -147,6 +147,8 @@ static const int GC_FROZEN_MONSTER_DAMAGE_PERCENT = 150;
 
 static const int GC_SHIP_HINT_DIST = 1400;
 static const int GC_SHIP_COMPASS_SEC = 25;
+static const float GC_SHIP_MONSTER_REPEL_BUFFER = 40.f;
+static const float GC_SHIP_MONSTER_BOUNCE = 12.f;
 static const int GC_SCAN_LINK_SEC = 2;
 
 inline int BalanceMonsterSpawnInterval(int TickSpeed, int PlayersAlive)

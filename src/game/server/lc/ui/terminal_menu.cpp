@@ -161,11 +161,13 @@ static void FillMainPage(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPla
 	{
 		LcFillLobbyNextSteps(pMenu, pLoc, pLang);
 		pMenu->AddInfo("");
+		LcAddJoinRoleTerminalActions(pMenu, pGameServer, pP, pLoc, pLang);
+		pMenu->AddInfo("");
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 1", _("☞ 公司商店"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 7", _("☞ 选择路线"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 3", _("☞ 图鉴"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
-		if(pGameServer->m_CountInGame >= g_Config.m_SvLessPlayerStart)
+		if(!pP->m_LcSpectatorOptIn && pGameServer->m_CountInGame >= g_Config.m_SvLessPlayerStart)
 		{
 			char aLaunch[96];
 			int NeedStart = pGameServer->GetNeedVoteStart();
@@ -173,10 +175,22 @@ static void FillMainPage(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPla
 				"count", &pGameServer->m_VoteStart, "need", &NeedStart);
 			pMenu->AddAction("lcm_vote qstart", aLaunch);
 		}
+		else if(pP->m_LcSpectatorOptIn)
+		{
+			AddInfoLoc(pMenu, pLoc, pLang, _("旁观者不计入出发人数，也无法投票出发"));
+		}
 	}
 	else
 	{
 		CCharacter *pChr = pP->GetCharacter();
+		if(LcPlayerIsExpeditionSpectator(pP))
+		{
+			AddInfoLoc(pMenu, pLoc, pLang, _("☪ 旁观中（本班次仅观看）"));
+			AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 5", _("☞ 怪物图鉴"));
+			AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
+		}
+		else
+		{
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 20", _("☞ 队员状态"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 21", _("☞ 分步教程"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
@@ -210,6 +224,7 @@ static void FillMainPage(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPla
 			AddInfoLoc(pMenu, pLoc, pLang, _("☪ 死人无法操作"));
 			AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 3", _("☞ 图鉴"));
 		}
+		}
 	}
 }
 
@@ -218,7 +233,7 @@ void CLcTerminalMenu::Populate(CGameContext *pGameServer, int ClientID)
 	CPlayer *pP = pGameServer->m_apPlayers[ClientID];
 	if(!pP)
 		return;
-	if(!pP->GetCharacter() && pGameServer->Server()->m_LocateGame != LOCATE_LOBBY)
+	if(!pP->GetCharacter() && pGameServer->Server()->m_LocateGame != LOCATE_LOBBY && !LcPlayerIsExpeditionSpectator(pP))
 		return;
 
 	Clear();
@@ -236,6 +251,8 @@ void CLcTerminalMenu::Populate(CGameContext *pGameServer, int ClientID)
 		AddInfoLoc(this, pLoc, pLang, _("1. ESC 投票 → 选路线 → 投票出发"));
 		AddInfoLoc(this, pLoc, pLang, _("2. F3 终端 → 商店购买 → 查看图鉴"));
 		AddInfoLoc(this, pLoc, pLang, _("3. 设施内锤子拾取废品 → 回着陆飞船"));
+		AddInfo("");
+		LcAddJoinRoleTerminalActions(this, pGameServer, pP, pLoc, pLang);
 		AddInfo("");
 		if(MOD_QQ_GROUP[0])
 		{
@@ -596,6 +613,16 @@ bool CLcTerminalMenu::ExecuteAction(CGameContext *pGameServer, CPlayer *pPlayer,
 			{
 				pGameServer->ExecutePlayerVoteCommand(ClientID, pCmd + 9, "");
 				pGameServer->ResetVotes(ClientID);
+				return true;
+			}
+			if(str_comp(pCmd, "lcm_role spec") == 0)
+			{
+				pGameServer->ExecutePlayerVoteCommand(ClientID, "lc_spec", "");
+				return true;
+			}
+			if(str_comp(pCmd, "lcm_role play") == 0)
+			{
+				pGameServer->ExecutePlayerVoteCommand(ClientID, "lc_play", "");
 				return true;
 			}
 			if(str_comp_num(pCmd, "lcm_scrap use ", 14) == 0)

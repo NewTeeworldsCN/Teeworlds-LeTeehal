@@ -23,6 +23,8 @@ public:
     void RecalculateValue();
     void UpdateValue();
     bool Contains(vec2 Pos) const;
+    bool Overlaps(vec2 Pos, float Margin) const;
+    bool RepelEntity(vec2 *pPos, vec2 *pVel, float PhysRadius) const;
     int GetValue() { return m_Value; }
     int GetNum() { return m_Num; }
 

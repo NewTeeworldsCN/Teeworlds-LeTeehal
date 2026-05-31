@@ -17,6 +17,7 @@
 #include "../core/projectile.h"
 #include "../core/character.h"
 #include "monster.h"
+#include "ship.h"
 
 CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int Armor, bool Boss)
 : CEntity(pWorld, CGameWorld::ENTTYPE_MONSTER)
@@ -424,6 +425,27 @@ void CMonster::HandleNinja(bool IsPredicted)
 	}
 }
 
+void CMonster::ApplyShipBarrier()
+{
+	CShip *pShip = GameServer()->m_pController ? GameServer()->m_pController->m_pShip : 0;
+	if(!pShip || GameServer()->Server()->m_LocateGame != LOCATE_GAME)
+		return;
+
+	const float PhysRadius = (float)m_ProximityRadius;
+	if(pShip->RepelEntity(&m_Pos, &m_Core.m_Vel, PhysRadius))
+		GameServer()->CreateHammerHit(m_Pos);
+
+	if(m_Core.m_HookState != HOOK_IDLE)
+	{
+		if(pShip->Overlaps(m_Pos, PhysRadius) || pShip->Overlaps(m_Core.m_HookPos, 8.f))
+		{
+			m_Core.m_HookState = HOOK_IDLE;
+			m_Core.m_HookedPlayer = -1;
+			m_Core.m_HookPos = m_Pos;
+		}
+	}
+}
+
 void CMonster::Move()
 {
     if(m_Freeze || (m_Type == TYPE_FEAR && IsSeenByAnyPlayer()))
@@ -821,6 +843,8 @@ void CMonster::Tick()
 		HandleCore();
 		Move();
 	}
+
+	ApplyShipBarrier();
 
     if(m_DieTick > 0)
     {

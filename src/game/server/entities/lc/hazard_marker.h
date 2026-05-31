@@ -19,6 +19,7 @@ private:
 	float m_Size;
 	int m_PulseTick;
 
+	float PulseScale() const;
 	void SnapLaser(vec2 From, vec2 To, int SnappingClient);
 	void SnapProjectile(int SnappingClient);
 	void SnapLaserFrame(int SnappingClient);

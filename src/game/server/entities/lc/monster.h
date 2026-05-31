@@ -109,6 +109,7 @@ private:
 	bool IsSeenByPlayer(CCharacter *pChr);
 	bool IsSeenByAnyPlayer();
 	void HandleCoilheadStareBroadcast();
+	void ApplyShipBarrier();
 
 	CEntity *m_apHitObjects[10];
 	int m_NumObjectsHit;

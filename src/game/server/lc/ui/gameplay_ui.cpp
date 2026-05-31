@@ -7,6 +7,7 @@
 #include "../../core/gamecontroller.h"
 #include "../../core/player.h"
 #include "../../entities/core/character.h"
+#include "terminal_menu.h"
 #include "../../entities/lc/ship.h"
 #include "../../entities/lc/monster.h"
 #include "../../lc/hazards/hazards.h"
@@ -390,7 +391,10 @@ void LcFormatLandmarkLabel(char *pBuf, int Size, CGameContext *pGameServer, vec2
 
 const char *LcPlayerExpeditionStatus(CGameContext *pGameServer, int ClientID)
 {
+	CPlayer *pP = pGameServer->m_apPlayers[ClientID];
 	CCharacter *pChr = pGameServer->GetPlayerChar(ClientID);
+	if(pP && LcPlayerIsExpeditionSpectator(pP) && !pChr)
+		return _("旁观");
 	if(!pChr)
 		return _("离线");
 	if(pChr->m_Freeze)
@@ -398,6 +402,100 @@ const char *LcPlayerExpeditionStatus(CGameContext *pGameServer, int ClientID)
 	if(pChr->m_InShip)
 		return _("已登船");
 	return _("设施内");
+}
+
+bool LcPlayerIsExpeditionSpectator(CPlayer *pPlayer)
+{
+	return pPlayer && pPlayer->GetTeam() == TEAM_SPECTATORS;
+}
+
+bool LcPlayerCountsForStart(CGameContext *pGameServer, CPlayer *pPlayer)
+{
+	if(!pGameServer || !pPlayer || !pPlayer->GetCharacter())
+		return false;
+	if(LcPlayerIsExpeditionSpectator(pPlayer))
+		return false;
+	if(pGameServer->Server()->m_LocateGame == LOCATE_LOBBY && pPlayer->m_LcSpectatorOptIn)
+		return false;
+	return true;
+}
+
+void LcSetSpectatorOptIn(CGameContext *pGameServer, int ClientID, bool OptIn)
+{
+	CPlayer *pP = pGameServer->m_apPlayers[ClientID];
+	if(!pP)
+		return;
+
+	if(pGameServer->Server()->m_LocateGame != LOCATE_LOBBY)
+	{
+		pGameServer->SendChatTarget(ClientID, OptIn
+			? _("请在飞船上登记：下趟以旁观者加入")
+			: _("请回到飞船后再取消旁观登记"));
+		return;
+	}
+
+	if(pP->m_VoteStarted)
+	{
+		pP->m_VoteStarted = false;
+		pGameServer->m_VoteStart--;
+	}
+
+	pP->m_LcSpectatorOptIn = OptIn;
+	pGameServer->m_aLcSpectatorOptIn[ClientID] = OptIn;
+	if(OptIn)
+		pGameServer->SendChatTarget(ClientID, _("已登记：下趟远征将以旁观者加入（仅观看，无法中途加入）"));
+	else
+		pGameServer->SendChatTarget(ClientID, _("已取消旁观登记，下趟将正常参与班次"));
+
+	pGameServer->ResetVotes(ClientID);
+	if(pP->m_TerminalMenuOpen)
+		pGameServer->RefreshTerminalMenu(ClientID);
+}
+
+static void AddActionLocJoinRole(CLcTerminalMenu *pMenu, CLocalization *pLoc, const char *pLang, const char *pCmd, const char *pKey)
+{
+	char aBuf[128];
+	LcLocalizeCopy(aBuf, sizeof(aBuf), pLoc, pLang, pKey);
+	pMenu->AddAction(pCmd, aBuf);
+}
+
+void LcAddJoinRoleTerminalActions(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPlayer *pPlayer, CLocalization *pLoc, const char *pLang)
+{
+	if(!pMenu || !pGameServer || !pPlayer || pGameServer->Server()->m_LocateGame != LOCATE_LOBBY)
+		return;
+
+	AddInfoLoc(pMenu, pLoc, pLang, _("【旁观登记】"));
+	if(pPlayer->m_LcSpectatorOptIn)
+	{
+		AddInfoLoc(pMenu, pLoc, pLang, _("下趟远征：旁观者（仅观看）"));
+		AddActionLocJoinRole(pMenu, pLoc, pLang, "lcm_role play", _("☞ 取消旁观登记"));
+	}
+	else
+	{
+		AddInfoLoc(pMenu, pLoc, pLang, _("下趟远征：正常参与"));
+		AddActionLocJoinRole(pMenu, pLoc, pLang, "lcm_role spec", _("☞ 登记下趟旁观"));
+	}
+	AddInfoLoc(pMenu, pLoc, pLang, _("出发进入设施后才会进入旁观，回飞船可取消"));
+}
+
+void LcAddJoinRoleVoteOptions(CGameContext *pGameServer, int ClientID, CPlayer *pPlayer)
+{
+	if(!pGameServer || !pPlayer || pGameServer->Server()->m_LocateGame != LOCATE_LOBBY)
+		return;
+
+	pGameServer->AddVote(ClientID, "null", _("------ 旁观登记 ------"));
+	if(pPlayer->m_LcSpectatorOptIn)
+	{
+		pGameServer->AddVote(ClientID, "null", _("下趟远征：旁观者（仅观看）"));
+		pGameServer->AddVote(ClientID, "lc_play", _("☞ 取消旁观登记"));
+	}
+	else
+	{
+		pGameServer->AddVote(ClientID, "null", _("下趟远征：正常参与"));
+		pGameServer->AddVote(ClientID, "lc_spec", _("☞ 登记下趟旁观"));
+	}
+	pGameServer->AddVote(ClientID, "null", _("出发后进入旁观，回飞船可取消"));
+	pGameServer->AddVote(ClientID, "null", _("---------------"));
 }
 
 static const char *LcMonsterProximityMsg(CMonster *pMon)

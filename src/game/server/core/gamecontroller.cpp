@@ -340,15 +340,29 @@ void CGameController::StartRound()
 	{
 		if(!GameServer()->m_apPlayers[i])
 			continue;
+
+		CPlayer *pP = GameServer()->m_apPlayers[i];
+		if(pP->m_LcSpectatorOptIn || GameServer()->m_aLcSpectatorOptIn[i])
+		{
+			pP->m_LcSpectatorOptIn = true;
+			GameServer()->m_aLcSpectatorOptIn[i] = true;
+			pP->SetTeam(TEAM_SPECTATORS);
+			pP->m_LcExpeditionParticipant = false;
+			GameServer()->SendChatTarget(i, _("本班次你以旁观者身份观看"));
+			continue;
+		}
+
+		if(pP->GetTeam() == TEAM_SPECTATORS)
+			continue;
 		
-		GameServer()->m_apPlayers[i]->m_Score = 0;
+		pP->m_Score = 0;
 		GameServer()->m_apPlayers[i]->ResetScraps();
 		GameServer()->m_apPlayers[i]->m_Hand = 0;
 		GameServer()->m_apPlayers[i]->m_ItemCount = 0;
 		GameServer()->ApplyExpeditionBonuses(i);
 
 		Server()->GetClientSession(i)->m_RoundId = m_RoundId;
-		GameServer()->m_apPlayers[i]->m_LcExpeditionParticipant = true;
+		pP->m_LcExpeditionParticipant = true;
 	}
 	Server()->DemoRecorder_HandleAutoStart();
 
@@ -472,13 +486,29 @@ void CGameController::PostReset()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(GameServer()->m_apPlayers[i])
+		CPlayer *pP = GameServer()->m_apPlayers[i];
+		if(!pP)
+			continue;
+
+		if(Server()->m_LocateGame == LOCATE_LOBBY)
 		{
-			GameServer()->m_apPlayers[i]->Respawn();
-			GameServer()->m_apPlayers[i]->m_Score = 0;
-			GameServer()->m_apPlayers[i]->m_ScoreStartTick = Server()->Tick();
-			GameServer()->m_apPlayers[i]->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
+			if(pP->GetTeam() == TEAM_SPECTATORS)
+				pP->SetTeam(TEAM_RED);
 		}
+		else if(Server()->m_LocateGame == LOCATE_GAME && (pP->m_LcSpectatorOptIn || GameServer()->m_aLcSpectatorOptIn[i]))
+		{
+			pP->m_LcSpectatorOptIn = true;
+			GameServer()->m_aLcSpectatorOptIn[i] = true;
+			pP->SetTeam(TEAM_SPECTATORS);
+			pP->m_Score = 0;
+			pP->m_ScoreStartTick = Server()->Tick();
+			continue;
+		}
+
+		pP->Respawn();
+		pP->m_Score = 0;
+		pP->m_ScoreStartTick = Server()->Tick();
+		pP->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()/2;
 	}
 }
 
@@ -544,9 +574,18 @@ void CGameController::TogglePause()
 
 bool CGameController::IsFriendlyFire(int ClientID1, int ClientID2)
 {
-	(void)ClientID1;
-	(void)ClientID2;
-	return false;
+	if(ClientID1 < 0 || ClientID2 < 0 || ClientID1 == ClientID2)
+		return false;
+
+	if(!GameServer()->m_apPlayers[ClientID1] || !GameServer()->m_apPlayers[ClientID2])
+		return false;
+
+	const int Team1 = GameServer()->m_apPlayers[ClientID1]->GetTeam();
+	const int Team2 = GameServer()->m_apPlayers[ClientID2]->GetTeam();
+	if(Team1 == TEAM_SPECTATORS || Team2 == TEAM_SPECTATORS)
+		return false;
+
+	return Team1 == Team2;
 }
 
 bool CGameController::IsForceBalanced()
@@ -839,6 +878,10 @@ bool CGameController::CanJoinTeam(int Team, int NotThisID)
 
 bool CGameController::CanChangeTeam(CPlayer *pPlayer, int JoinTeam)
 {
+	if(pPlayer && pPlayer->GetTeam() == TEAM_SPECTATORS && JoinTeam != TEAM_SPECTATORS &&
+		Server()->m_LocateGame == LOCATE_GAME && m_ExpeditionPhase == LC_PHASE_EXPEDITION && m_PrepareTick < 0)
+		return false;
+
 	int aT[2] = {0, 0};
 
 	if (JoinTeam == TEAM_SPECTATORS || !g_Config.m_SvTeambalanceTime)
