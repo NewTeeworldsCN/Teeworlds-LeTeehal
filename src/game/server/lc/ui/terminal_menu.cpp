@@ -14,6 +14,7 @@
 
 #include <engine/shared/config.h>
 #include <game/generated/protocol.h>
+#include <game/version.h>
 #include <teeuniverses/components/localization.h>
 
 void CLcTerminalMenu::Clear()
@@ -163,6 +164,7 @@ static void FillMainPage(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPla
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 1", _("☞ 公司商店"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 7", _("☞ 选择路线"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 3", _("☞ 图鉴"));
+		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
 		if(pGameServer->m_CountInGame >= g_Config.m_SvLessPlayerStart)
 		{
 			char aLaunch[96];
@@ -177,6 +179,7 @@ static void FillMainPage(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPla
 		CCharacter *pChr = pP->GetCharacter();
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 20", _("☞ 队员状态"));
 		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 21", _("☞ 分步教程"));
+		AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
 		if(pChr && pChr->m_InShip)
 		{
 			LcFillShipQuotaSummary(pMenu, pGameServer, pLoc, pLang);
@@ -234,8 +237,16 @@ void CLcTerminalMenu::Populate(CGameContext *pGameServer, int ClientID)
 		AddInfoLoc(this, pLoc, pLang, _("2. F3 终端 → 商店购买 → 查看图鉴"));
 		AddInfoLoc(this, pLoc, pLang, _("3. 设施内锤子拾取废品 → 回着陆飞船"));
 		AddInfo("");
+		if(MOD_QQ_GROUP[0])
+		{
+			char aQq[96];
+			LcFormatCopy(aQq, sizeof(aQq), pLoc, pLang, _("【官方 QQ 交流群】{str:qq}"), "qq", MOD_QQ_GROUP);
+			AddInfo(aQq);
+			AddInfo("");
+		}
 		AddInfoLoc(this, pLoc, pLang, _("输入 /help 1 查看分步教程 | /status 查看任务"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 21", _("☞ 分步教程"));
+		AddActionLoc(this, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 0", _("⏎ 进入终端"));
 		break;
 	case LC_PAGE_TEAM:
@@ -259,6 +270,9 @@ void CLcTerminalMenu::Populate(CGameContext *pGameServer, int ClientID)
 		AddInfoLoc(this, pLoc, pLang, _("截止日前达成指标，否则全进度重置"));
 		AddInfoLoc(this, pLoc, pLang, _("/help store|monsters|scrap 查看图鉴 | /status 任务状态"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 0", _("⏎ 返回"));
+		break;
+	case LC_PAGE_CREDITS:
+		LcFillCreditsPage(this, pLoc, pLang);
 		break;
 	case LC_PAGE_STORE:
 	{
@@ -298,6 +312,7 @@ void CLcTerminalMenu::Populate(CGameContext *pGameServer, int ClientID)
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 4", _("☞ 商店说明"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 5", _("☞ 怪物图鉴"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 6", _("☞ 废品说明"));
+		AddActionLoc(this, pLoc, pLang, "lcm_goto 32", _("☞ 制作人员"));
 		AddActionLoc(this, pLoc, pLang, "lcm_goto 0", _("⏎ 返回"));
 		break;
 	case LC_PAGE_GUIDE_STORE:

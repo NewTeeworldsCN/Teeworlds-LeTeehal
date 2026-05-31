@@ -13,6 +13,7 @@
 #include "../../entities/lc/monster.h"
 
 #include <teeuniverses/components/localization.h>
+#include <game/version.h>
 
 static void AddInfoLoc(CLcTerminalMenu *pMenu, CLocalization *pLoc, const char *pLang, const char *pKey)
 {
@@ -944,6 +945,40 @@ void LcFillShipCargoIndex(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CLo
 
 	if(c == 0)
 		AddInfoLoc(pMenu, pLoc, pLang, _("船上暂无废品"));
+	AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 0", _("⏎ 返回"));
+}
+
+void LcFillCreditsPage(CLcTerminalMenu *pMenu, CLocalization *pLoc, const char *pLang)
+{
+	char aLine[128];
+	AddInfoLoc(pMenu, pLoc, pLang, _("=== 制作人员名单 ==="));
+	LcFormatCopy(aLine, sizeof(aLine), pLoc, pLang, _("{str:name} · 版本 {str:version}"),
+		"name", MOD_NAME, "version", MOD_VERSION);
+	pMenu->AddInfo(aLine);
+	AddInfoLoc(pMenu, pLoc, pLang, _("基于 Teeworlds 0.6.4 的致命公司风格合作模组"));
+	AddInfoLoc(pMenu, pLoc, pLang, "");
+	AddInfoLoc(pMenu, pLoc, pLang, _("【主要开发者】"));
+	AddInfoLoc(pMenu, pLoc, pLang, _("Flower (CometOnOrbit)"));
+	AddInfoLoc(pMenu, pLoc, pLang, _("Bamcane"));
+	if(MOD_THANKS[0])
+	{
+		AddInfoLoc(pMenu, pLoc, pLang, "");
+		LcFormatCopy(aLine, sizeof(aLine), pLoc, pLang, _("【特别鸣谢】{str:c}"), "c", MOD_THANKS);
+		pMenu->AddInfo(aLine);
+	}
+	if(MOD_SOURCES[0])
+	{
+		AddInfoLoc(pMenu, pLoc, pLang, "");
+		LcFormatCopy(aLine, sizeof(aLine), pLoc, pLang, _("【项目主页】{str:url}"), "url", MOD_SOURCES);
+		pMenu->AddInfo(aLine);
+	}
+	if(MOD_QQ_GROUP[0])
+	{
+		AddInfoLoc(pMenu, pLoc, pLang, "");
+		LcFormatCopy(aLine, sizeof(aLine), pLoc, pLang, _("【官方 QQ 交流群】{str:qq}"), "qq", MOD_QQ_GROUP);
+		pMenu->AddInfo(aLine);
+	}
+	AddInfoLoc(pMenu, pLoc, pLang, "");
 	AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 0", _("⏎ 返回"));
 }
 

@@ -1497,6 +1497,9 @@ void CGameContext::ConAbout(IConsole::IResult *pResult, void *pUserData)
 	CGameContext* pThis = (CGameContext*) pUserData;
 	
 	pThis->SendChatTarget(pResult->GetClientID(), _("{str:name} {str:version}，作者 {str:authors}"), "name", MOD_NAME, "version", MOD_VERSION, "authors", MOD_AUTHORS);
+	pThis->SendChatTarget(pResult->GetClientID(), _("F3 终端 → 制作人员 可查看完整名单"));
+	if(MOD_QQ_GROUP[0])
+		pThis->SendChatTarget(pResult->GetClientID(), _("【官方 QQ 交流群】{str:qq}"), "qq", MOD_QQ_GROUP);
 	
 	if(MOD_CREDITS[0])
 		pThis->SendChatTarget(pResult->GetClientID(), _("制作人员：{str:c}"), "c", MOD_CREDITS);

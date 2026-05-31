@@ -26,6 +26,7 @@ void LcFillInventoryUseList(CLcTerminalMenu *pMenu, CGameContext *pGameServer, C
 void LcFillInventoryDropList(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPlayer *pP, CLocalization *pLoc, const char *pLang);
 void LcFillInventoryDetail(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPlayer *pP, int Slot, CLocalization *pLoc, const char *pLang);
 void LcFillShipCargoIndex(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CLocalization *pLoc, const char *pLang);
+void LcFillCreditsPage(CLcTerminalMenu *pMenu, CLocalization *pLoc, const char *pLang);
 
 void LcSendStoreGuide(CGameContext *pGameServer, int ClientID);
 void LcSendMonsterGuide(CGameContext *pGameServer, int ClientID);

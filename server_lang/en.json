@@ -29,6 +29,10 @@
             "value": "- - - - - - - - - - - -"
         },
         {
+            "key": "--- 内容未完全显示，请滚轮查看 ---",
+            "value": "--- 内容未完全显示，请滚轮查看 ---"
+        },
+        {
             "key": "---------------",
             "value": "---------------"
         },
@@ -41,12 +45,32 @@
             "value": "=== 个人生涯 ==="
         },
         {
+            "key": "=== 制作人员名单 ===",
+            "value": "=== 制作人员名单 ==="
+        },
+        {
+            "key": "Bamcane",
+            "value": "Bamcane"
+        },
+        {
+            "key": "F3 终端 → 制作人员 可查看完整名单",
+            "value": "F3 终端 → 制作人员 可查看完整名单"
+        },
+        {
             "key": "F3=公司终端 | /help 1 分步教程",
             "value": "F3=公司终端 | /help 1 分步教程"
         },
         {
+            "key": "Flower (CometOnOrbit)",
+            "value": "Flower (CometOnOrbit)"
+        },
+        {
             "key": "{int:id} {lstr:name} | {lstr:desc}",
             "value": "{int:id} {lstr:name} | {lstr:desc}"
+        },
+        {
+            "key": "{str:name} · 版本 {str:version}",
+            "value": "{str:name} · 版本 {str:version}"
         },
         {
             "key": "{str:name}: {lstr:status}",
@@ -71,6 +95,10 @@
         {
             "key": "☞ 分步教程",
             "value": "☞ 分步教程"
+        },
+        {
+            "key": "☞ 制作人员",
+            "value": "☞ 制作人员"
         },
         {
             "key": "☞ 泰坦 [★★★★★]",
@@ -101,6 +129,10 @@
             "value": "【中途加入】你在着陆飞船附近复活"
         },
         {
+            "key": "【主要开发者】",
+            "value": "【主要开发者】"
+        },
+        {
             "key": "【公司】头目 {lstr:name} 已被清除，公司奖励 {int:bonus} 元",
             "value": "【公司】头目 {lstr:name} 已被清除，公司奖励 {int:bonus} 元"
         },
@@ -119,6 +151,10 @@
         {
             "key": "【威胁接近】附近有怪物",
             "value": "【威胁接近】附近有怪物"
+        },
+        {
+            "key": "【官方 QQ 交流群】{str:qq}",
+            "value": "【官方 QQ 交流群】{str:qq}"
         },
         {
             "key": "【弹簧头】附近有弹簧头潜伏",
@@ -153,8 +189,16 @@
             "value": "【爆壳虫】爆炸型怪物接近"
         },
         {
+            "key": "【特别鸣谢】{str:c}",
+            "value": "【特别鸣谢】{str:c}"
+        },
+        {
             "key": "【猛禽】远程怪物在附近",
             "value": "【猛禽】远程怪物在附近"
+        },
+        {
+            "key": "【项目主页】{str:url}",
+            "value": "【项目主页】{str:url}"
         },
         {
             "key": "【飞行器状态】",
@@ -201,6 +245,10 @@
             "value": "地图生成进度… 阶段 {int:s}/3"
         },
         {
+            "key": "基于 Teeworlds 0.6.4 的致命公司风格合作模组",
+            "value": "基于 Teeworlds 0.6.4 的致命公司风格合作模组"
+        },
+        {
             "key": "对策：利用掩体与高低差；优先远程点杀。",
             "value": "对策：利用掩体与高低差；优先远程点杀。"
         },
@@ -243,6 +291,14 @@
         {
             "key": "血量较低，集火可快速清除。",
             "value": "血量较低，集火可快速清除。"
+        },
+        {
+            "key": "该主题已移除，请使用: theme metal|grass|desert|jungle|winter",
+            "value": "该主题已移除，请使用: theme metal|grass|desert|jungle|winter"
+        },
+        {
+            "key": "首次加入：按 F3 打开公司终端引导",
+            "value": "首次加入：按 F3 打开公司终端引导"
         },
         {
             "key": "高速地面追击，比猛禽更快但血量更低。",
@@ -1617,10 +1673,6 @@
             "value": "Speed boost"
         },
         {
-            "key": "注视定身·未看秒杀",
-            "value": "Stare to freeze · instakill if ignored"
-        },
-        {
             "key": "北",
             "value": "N"
         },
@@ -1879,10 +1931,6 @@
         {
             "key": "左键朝鼠标射击 | 右键按瞄准方向升降 | 空格下机。",
             "value": "LMB at cursor | RMB rise/fall | Space exit."
-        },
-        {
-            "key": "已为你打开终端引导，请按 F3 查看",
-            "value": "Terminal guide opened — press F3"
         },
         {
             "key": "已放入飞船的废品（只读）",
@@ -2363,6 +2411,10 @@
         {
             "key": "注意友伤，投掷前确认队友位置。",
             "value": "Watch friendly fire before throwing."
+        },
+        {
+            "key": "注视定身·未看秒杀",
+            "value": "Stare to freeze · instakill if ignored"
         },
         {
             "key": "消耗",

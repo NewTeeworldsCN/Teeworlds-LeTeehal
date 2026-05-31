@@ -13,6 +13,7 @@
 
 #include <engine/shared/config.h>
 #include <game/generated/protocol.h>
+#include <game/version.h>
 #include <teeuniverses/components/localization.h>
 
 void LcFormatQuotaProgress(char *pBuf, int Size, int Money, int Quota)
@@ -94,6 +95,12 @@ void LcSendWelcomeMotd(CGameContext *pGameServer, int ClientID)
 	LcLocalizeCopy(aLine, sizeof(aLine), pLoc, pLang, _("3. 设施内锤子拾取废品 → 回着陆飞船"));
 	str_append(aMotd, aLine, sizeof(aMotd));
 	str_append(aMotd, "\n\n", sizeof(aMotd));
+	if(MOD_QQ_GROUP[0])
+	{
+		LcFormatCopy(aLine, sizeof(aLine), pLoc, pLang, _("【官方 QQ 交流群】{str:qq}"), "qq", MOD_QQ_GROUP);
+		str_append(aMotd, aLine, sizeof(aMotd));
+		str_append(aMotd, "\n", sizeof(aMotd));
+	}
 	LcLocalizeCopy(aLine, sizeof(aLine), pLoc, pLang, _("提示：F3 打开终端后内容较多，建议 F1 输入 cl_motd_time 100 延长显示。"));
 	str_append(aMotd, aLine, sizeof(aMotd));
 	str_append(aMotd, "\n", sizeof(aMotd));

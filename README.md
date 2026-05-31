@@ -3,7 +3,7 @@
 **LeTeehal Company** is a **Lethal Company**-style cooperative scrap-run mod for **Teeworlds 0.6.4**.  
 Connect with the vanilla Teeworlds 0.6 client to a `Leteehal-Server` instance.
 
-- Mod version: **0.4.5**
+- Mod version: **0.5.5**
 - GameType: `LeteehalCompany`
 - Authors: Flower, ST-Chara
 - Upstream: https://github.com/NewTeeworldsCN/Teeworlds-LeTeehal

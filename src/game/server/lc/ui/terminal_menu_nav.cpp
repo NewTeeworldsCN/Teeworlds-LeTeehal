@@ -5,7 +5,7 @@
 
 bool LcTerminalInfoScrollPage(int Page)
 {
-	return Page == LC_PAGE_TEAM || Page == LC_PAGE_HELP_TUT
+	return Page == LC_PAGE_TEAM || Page == LC_PAGE_HELP_TUT || Page == LC_PAGE_CREDITS
 		|| Page == LC_PAGE_GUIDE_MONSTERS || Page == LC_PAGE_GUIDE_SCRAP
 		|| LcTerminalIsGuideMonsterDetail(Page) || LcTerminalIsGuideStoreDetail(Page)
 		|| LcTerminalIsGuideScrapDetail(Page);
@@ -61,6 +61,7 @@ int LcTerminalParentPage(int Page)
 	case LC_PAGE_WELCOME:
 	case LC_PAGE_TEAM:
 	case LC_PAGE_HELP_TUT:
+	case LC_PAGE_CREDITS:
 		return LC_PAGE_MAIN;
 	case LC_PAGE_INVENTORY_USE:
 	case LC_PAGE_INVENTORY_DROP:
@@ -108,6 +109,7 @@ bool LcTerminalIsValidPage(int Page)
 	case LC_PAGE_WELCOME:
 	case LC_PAGE_TEAM:
 	case LC_PAGE_HELP_TUT:
+	case LC_PAGE_CREDITS:
 		return true;
 	default:
 		break;
