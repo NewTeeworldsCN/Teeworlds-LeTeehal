@@ -22,6 +22,7 @@ public:
     
     void RecalculateValue();
     void UpdateValue();
+    void UpdateValue(int NotifyClientID);
     bool Contains(vec2 Pos) const;
     bool Overlaps(vec2 Pos, float Margin) const;
     bool RepelEntity(vec2 *pPos, vec2 *pVel, float PhysRadius) const;

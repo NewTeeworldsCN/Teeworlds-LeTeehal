@@ -13,8 +13,6 @@
 
 void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 {
-		pGameServer->CreateSoundGlobal(SOUND_PICKUP_ARMOR, ClientID);
-	
 		CPlayer *pP = pGameServer->m_apPlayers[ClientID];
 		if(pGameServer->Server()->m_LocateGame == LOCATE_GAME)
 		{
@@ -118,6 +116,8 @@ void LcBuildVoteMenu(CGameContext *pGameServer, int ClientID)
 					pP->m_AddedWeight = 0;
 				pGameServer->AddVote(ClientID, "null", _("携带: {int:lb}镑 / {int:value}元"), "lb", &Lb, "value", &Value);
 				pGameServer->AddVote(ClientID, "null", _(".-=携带废品=-."));
+				if(pP->m_vScraps.size() > 0)
+					pGameServer->AddVote(ClientID, "scrap_dropall", _("☞ 一键扔掉背包全部"));
 
 				for(int i = 0; i < pP->m_vScraps.size(); i++)
 				{

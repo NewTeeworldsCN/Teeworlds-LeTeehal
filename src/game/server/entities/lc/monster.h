@@ -102,6 +102,11 @@ public:
 	bool m_Boss;
 	int m_BossType;
 	bool m_BrackenTelegraphSent;
+	bool m_StalkerCharging;
+	bool m_StalkerChargeMelee;
+	int m_StalkerChargeUntilTick;
+	int m_LastStalkerChargeSoundTick;
+	vec2 m_StalkerChargeDir;
 
 private:
 	CCharacter *ClosestPlayer(vec2 Pos, float Radius);
@@ -110,6 +115,10 @@ private:
 	bool IsSeenByAnyPlayer();
 	void HandleCoilheadStareBroadcast();
 	void ApplyShipBarrier();
+	void StartStalkerCharge(CCharacter *pChr, float Dist, float MeleeReach);
+	void TickStalkerCharge();
+	void FinishStalkerCharge();
+	void CancelStalkerCharge();
 
 	CEntity *m_apHitObjects[10];
 	int m_NumObjectsHit;

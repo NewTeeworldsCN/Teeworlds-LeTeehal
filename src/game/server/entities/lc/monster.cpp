@@ -42,6 +42,11 @@ CMonster::CMonster(CGameWorld *pWorld, int Type, int MonsterID, int Health, int 
     m_Exploded = false;
     m_Hidden = false;
     m_BrackenTelegraphSent = false;
+    m_StalkerCharging = false;
+    m_StalkerChargeMelee = false;
+    m_StalkerChargeUntilTick = 0;
+    m_LastStalkerChargeSoundTick = 0;
+    m_StalkerChargeDir = vec2(0, 0);
     m_GrassAmbushTick = 0;
     mem_zero(&m_Ninja, sizeof(m_Ninja));
     m_Mobility = MobilityTypeFor(Type);
@@ -423,6 +428,104 @@ void CMonster::HandleNinja(bool IsPredicted)
 			}
 		}
 	}
+}
+
+void CMonster::CancelStalkerCharge()
+{
+	m_StalkerCharging = false;
+	m_StalkerChargeMelee = false;
+	m_StalkerChargeUntilTick = 0;
+}
+
+void CMonster::StartStalkerCharge(CCharacter *pChr, float Dist, float MeleeReach)
+{
+	vec2 Dir = pChr->m_Pos - m_Pos;
+	if(length(Dir) < 0.01f)
+		Dir = vec2(1.f, 0.f);
+	else
+		Dir = normalize(Dir);
+
+	m_StalkerCharging = true;
+	m_StalkerChargeMelee = Dist <= MeleeReach;
+	m_StalkerChargeDir = Dir;
+	m_StalkerChargeUntilTick = Server()->Tick() + Server()->TickSpeed() * GC_STALKER_CHARGE_SEC;
+	m_LastStalkerChargeSoundTick = Server()->Tick();
+	m_Core.m_Vel = vec2(0, 0);
+	m_Path.m_Direction = 0;
+	m_Path.m_ActualDirection = 0;
+	GameServer()->CreateSound(m_Pos, SOUND_PICKUP_NINJA, CmaskAll());
+}
+
+void CMonster::TickStalkerCharge()
+{
+	m_Core.m_Vel = vec2(0, 0);
+	m_WillJump = false;
+	m_WillHook = false;
+	m_Core.m_HookState = HOOK_IDLE;
+	m_Core.m_HookedPlayer = -1;
+	m_Core.m_HookPos = m_Pos;
+	m_Path.m_Direction = 0;
+	m_Path.m_ActualDirection = 0;
+	if(IsGrounded())
+		m_Core.m_Jumped = 0;
+
+	if(m_Freeze)
+	{
+		CancelStalkerCharge();
+		return;
+	}
+
+	if(m_LastStalkerChargeSoundTick + Server()->TickSpeed() * GC_STALKER_CHARGE_SOUND_SEC <= Server()->Tick())
+	{
+		GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG, CmaskAll());
+		m_LastStalkerChargeSoundTick = Server()->Tick();
+	}
+
+	if(Server()->Tick() >= m_StalkerChargeUntilTick)
+	{
+		FinishStalkerCharge();
+		CancelStalkerCharge();
+	}
+}
+
+void CMonster::FinishStalkerCharge()
+{
+	vec2 Dir = m_StalkerChargeDir;
+	if(length(Dir) < 0.01f)
+		Dir = vec2(1.f, 0.f);
+
+	if(m_StalkerChargeMelee)
+	{
+		CCharacter *pChr = ClosestPlayer(m_Pos, m_ProximityRadius + 64.f);
+		if(pChr)
+		{
+			const float MeleeReach = m_ProximityRadius + pChr->m_ProximityRadius + 14.f;
+			float Dist = distance(m_Pos, pChr->m_Pos);
+			if(Dist <= MeleeReach &&
+				!GameServer()->Collision()->IntersectLine(m_Pos, pChr->m_Pos, 0x0, 0x0))
+			{
+				m_NumObjectsHit = 0;
+				GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
+				GameServer()->CreateSound(pChr->m_Pos, SOUND_NINJA_HIT);
+				if(length(pChr->m_Pos - m_Pos) > 0.0f)
+					GameServer()->CreateHammerHit(pChr->m_Pos - Dir * m_ProximityRadius * 0.5f);
+				else
+					GameServer()->CreateHammerHit(m_Pos);
+				pChr->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f,
+					g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, SnapClientID(m_MonsterID), WEAPON_NINJA);
+			}
+		}
+	}
+	else
+	{
+		m_NumObjectsHit = 0;
+		m_Ninja.m_ActivationDir = Dir;
+		m_Ninja.m_OldVelAmount = 0;
+		m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime;
+		GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE, CmaskAll());
+	}
+
+	m_LastFireTick = Server()->Tick();
 }
 
 void CMonster::ApplyShipBarrier()
@@ -821,6 +924,10 @@ void CMonster::Tick()
 	else if(m_Ninja.m_CurrentMoveTime > 0)
 	{
 		HandleNinja(false);
+	}
+	else if(m_Type == TYPE_STALKER && m_StalkerCharging)
+	{
+		TickStalkerCharge();
 	}
 	else if(m_Type == TYPE_FEAR && IsSeenByAnyPlayer())
 	{
@@ -1331,7 +1438,7 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
             }
         }
     }
-    else if(m_Type == TYPE_STALKER && pVict && m_Ninja.m_CurrentMoveTime <= 0)
+    else if(m_Type == TYPE_STALKER && pVict && m_Ninja.m_CurrentMoveTime <= 0 && !m_StalkerCharging)
     {
         CCharacter *pChr = (CCharacter *)pVict;
         float Dist = distance(m_Pos, pChr->m_Pos);
@@ -1341,34 +1448,7 @@ void CMonster::HandleActions() // This is the monsters AI, it has been decreased
             m_LastFireTick + Server()->TickSpeed() * GC_STALKER_ATTACK_SEC <= Server()->Tick() &&
             !GameServer()->Collision()->IntersectLine(m_Pos, pChr->m_Pos, 0x0, 0x0))
         {
-            vec2 Dir = pChr->m_Pos - m_Pos;
-            if(length(Dir) < 0.01f)
-                Dir = vec2(1.f, 0.f);
-            else
-                Dir = normalize(Dir);
-
-            if(Dist <= MeleeReach)
-            {
-                m_NumObjectsHit = 0;
-                GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
-                GameServer()->CreateSound(pChr->m_Pos, SOUND_NINJA_HIT);
-                if(length(pChr->m_Pos - m_Pos) > 0.0f)
-                    GameServer()->CreateHammerHit(pChr->m_Pos - Dir * m_ProximityRadius * 0.5f);
-                else
-                    GameServer()->CreateHammerHit(m_Pos);
-                pChr->TakeDamage(vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f,
-                    g_pData->m_Weapons.m_Ninja.m_pBase->m_Damage, SnapClientID(m_MonsterID), WEAPON_NINJA);
-                m_LastFireTick = Server()->Tick();
-            }
-            else
-            {
-                m_NumObjectsHit = 0;
-                m_Ninja.m_ActivationDir = Dir;
-                m_Ninja.m_OldVelAmount = (int)length(m_Core.m_Vel);
-                m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime;
-                GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE);
-                m_LastFireTick = Server()->Tick();
-            }
+            StartStalkerCharge(pChr, Dist, MeleeReach);
         }
     }
 
@@ -1445,6 +1525,7 @@ void CMonster::Stun(int Ticks)
 {
 	if(Ticks <= 0)
 		return;
+	CancelStalkerCharge();
 	m_FreezeUntilTick = Server()->Tick() + Ticks;
 	m_Freeze = true;
 }

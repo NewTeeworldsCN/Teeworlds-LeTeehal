@@ -641,6 +641,12 @@ bool CLcTerminalMenu::ExecuteAction(CGameContext *pGameServer, CPlayer *pPlayer,
 				pGameServer->ResetVotes(ClientID);
 				return true;
 			}
+			if(str_comp(pCmd, "lcm_scrap dropall") == 0)
+			{
+				pGameServer->DropAllBackpackScrap(ClientID);
+				pGameServer->ResetVotes(ClientID);
+				return true;
+			}
 			if(str_comp(pCmd, "lcm_deploy_aircraft") == 0)
 			{
 				pGameServer->DeployAircraft(ClientID);

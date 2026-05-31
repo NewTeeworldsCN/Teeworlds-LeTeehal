@@ -103,6 +103,8 @@ static const int GC_BOMBER_DETONATE_RANGE = 72;
 static const int GC_LEECH_DRAIN_RANGE = 120;
 static const int GC_LEECH_HOOK_RANGE = 800;
 static const int GC_STALKER_ATTACK_SEC = 1;
+static const int GC_STALKER_CHARGE_SEC = 1;
+static const int GC_STALKER_CHARGE_SOUND_SEC = 1;
 static const int GC_STALKER_LUNGE_EXTRA = 40;
 
 static const int GC_TURRET_RANGE = 640;

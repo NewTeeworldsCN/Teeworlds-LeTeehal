@@ -2217,6 +2217,66 @@ void CGameContext::CreditShipScrapDeposit(int ClientID, int Value)
 	SendChatTarget(ClientID, _("你为公司贡献了{int:v}元"), "v", &Value);
 }
 
+void CGameContext::DropAllBackpackScrap(int ClientID)
+{
+	CPlayer *pP = m_apPlayers[ClientID];
+	if(!pP)
+		return;
+
+	CCharacter *pChr = GetPlayerChar(ClientID);
+	if(!pChr || pChr->m_Freeze)
+	{
+		SendChatTarget(ClientID, _("☪ 死人无法操作"));
+		return;
+	}
+
+	if(pP->m_vScraps.size() == 0)
+	{
+		SendChatTarget(ClientID, _("背包为空"));
+		return;
+	}
+
+	int Dropped = 0;
+	vec2 DropPos = pChr->m_Pos;
+	if(pChr->m_InShip && m_pController && m_pController->m_pShip)
+		DropPos = m_pController->m_pShip->m_Pos;
+
+	while(pP->m_vScraps.size() > 0)
+	{
+		Scrap *pS = pP->m_vScraps[0];
+		if(!pS)
+		{
+			pP->m_vScraps.remove_index(0);
+			continue;
+		}
+
+		if(!pS->m_InShip && pChr->m_InShip)
+			CreditShipScrapDeposit(ClientID, pS->m_Value);
+		if(pChr->m_InShip && m_pController && m_pController->m_pShip)
+			DepositScrapInShip(DropPos, *pS);
+		else
+			new CScrap(&m_World, 0, pChr->m_Pos, false, false, *pS);
+		pP->m_vScraps.remove(pS);
+		delete pS;
+		Dropped++;
+	}
+
+	if(pChr->m_InShip && m_pController && m_pController->m_pShip)
+		CompactShipScrap(DropPos);
+
+	if(m_pController && m_pController->m_pShip)
+		m_pController->m_pShip->RecalculateValue();
+
+	if(pChr->m_InShip)
+		SendChatTarget(ClientID, _("已将背包内全部 {int:count} 件物品放入飞船"), "count", &Dropped);
+	else
+		SendChatTarget(ClientID, _("已扔掉背包内全部 {int:count} 件物品"), "count", &Dropped);
+
+	ResetVotes(ClientID);
+	if(pP->m_TerminalMenuOpen)
+		RefreshTerminalMenu(ClientID);
+}
+
 void CGameContext::CompactShipScrap(vec2 Center, float Radius)
 {
 	(void)Radius;
@@ -2658,6 +2718,12 @@ bool CGameContext::ExecutePlayerVoteCommand(int ClientID, const char *pCmd, cons
 		return true;
 	}
 
+	if(str_comp(pCmd, "scrap_dropall") == 0)
+	{
+		DropAllBackpackScrap(ClientID);
+		return true;
+	}
+
 	if(str_comp(pCmd, "refresh_monsters") == 0)
 		return true;
 
@@ -2690,7 +2756,7 @@ bool CGameContext::ExecutePlayerVoteCommand(int ClientID, const char *pCmd, cons
 		}
 
 		if(m_pController && m_pController->m_pShip)
-			m_pController->m_pShip->UpdateValue();
+			m_pController->m_pShip->RecalculateValue();
 		return true;
 	}
 

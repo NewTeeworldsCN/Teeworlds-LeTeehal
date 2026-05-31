@@ -327,6 +327,7 @@ public:
 	void DepositScrapInShip(vec2 Pos, const Scrap &Item);
 	void CompactShipScrap(vec2 Center, float Radius = GC_SHIP_SCRAP_MERGE_RADIUS);
 	void CreditShipScrapDeposit(int ClientID, int Value);
+	void DropAllBackpackScrap(int ClientID);
 	bool HasPendingExpeditionBonus(int ClientID) const;
 	void ApplyExpeditionBonuses(int ClientID);
 

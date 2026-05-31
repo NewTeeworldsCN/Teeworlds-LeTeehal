@@ -77,7 +77,7 @@ public:
 	static const int TERMINAL_MOTD_MAX = 1200;
 	static const int TERMINAL_MOTD_MAX_LINES = 22;
 	static const int TERMINAL_VISIBLE_ACTIONS = 6;
-	static const int TERMINAL_VISIBLE_INFO = 10;
+	static const int TERMINAL_VISIBLE_INFO = 12;
 
 	struct SEntry
 	{

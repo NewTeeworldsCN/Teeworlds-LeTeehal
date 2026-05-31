@@ -806,6 +806,7 @@ void LcFillInventoryIndex(CLcTerminalMenu *pMenu, CGameContext *pGameServer, CPl
 	AddInfoLoc(pMenu, pLoc, pLang, _("请先选择操作方式"));
 	AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 17", _("☞ 使用物品"));
 	AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 18", _("☞ 放下物品"));
+	AddActionLoc(pMenu, pLoc, pLang, "lcm_scrap dropall", _("☞ 一键扔掉全部"));
 	AddActionLoc(pMenu, pLoc, pLang, "lcm_goto 0", _("⏎ 返回"));
 }
 
@@ -845,6 +846,7 @@ void LcFillInventoryDropList(CLcTerminalMenu *pMenu, CGameContext *pGameServer, 
 	LcFillInventorySummary(pMenu, pGameServer, pP, pLoc, pLang);
 	AddInfoLoc(pMenu, pLoc, pLang, _("滚轮选物品，左键确认放下"));
 	pMenu->AddInfo("");
+	AddActionLoc(pMenu, pLoc, pLang, "lcm_scrap dropall", _("☞ 一键扔掉全部"));
 
 	int NumItems = 0;
 	for(int i = 0; i < pP->m_vScraps.size(); i++)

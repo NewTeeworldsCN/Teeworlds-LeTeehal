@@ -148,8 +148,24 @@ void CShip::RecalculateValue()
 
 void CShip::UpdateValue()
 {
+    UpdateValue(-1);
+}
+
+void CShip::UpdateValue(int NotifyClientID)
+{
     RecalculateValue();
-    GameServer()->ResetVotes(-1);
+    if(NotifyClientID >= 0)
+    {
+        GameServer()->ResetVotes(NotifyClientID);
+        return;
+    }
+
+    for(int i = 0; i < MAX_CLIENTS; i++)
+    {
+        CCharacter *pChr = GameServer()->GetPlayerChar(i);
+        if(pChr && pChr->m_InShip)
+            GameServer()->ResetVotes(i);
+    }
 }
 
 void CShip::TickPaused()

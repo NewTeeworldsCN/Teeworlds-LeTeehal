@@ -232,6 +232,9 @@ void CPlayer::OnPredictedInput(CNetObj_PlayerInput *NewInput)
 	if((m_PlayerFlags&PLAYERFLAG_CHATTING) && (NewInput->m_PlayerFlags&PLAYERFLAG_CHATTING))
 		return;
 
+	if(m_TerminalMenuOpen && (NewInput->m_PlayerFlags&PLAYERFLAG_SCOREBOARD))
+		GameServer()->CloseTerminalMenu(m_ClientID);
+
 	if(m_TerminalMenuOpen)
 	{
 		if(m_TerminalMenuInputWarmup)
@@ -267,6 +270,9 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 		if(m_PlayerFlags&PLAYERFLAG_CHATTING)
 			return;
 
+		if(m_TerminalMenuOpen)
+			GameServer()->CloseTerminalMenu(m_ClientID);
+
 		// reset input
 		if(m_pCharacter)
 			m_pCharacter->ResetInput();
@@ -274,6 +280,9 @@ void CPlayer::OnDirectInput(CNetObj_PlayerInput *NewInput)
 		m_PlayerFlags = NewInput->m_PlayerFlags;
  		return;
 	}
+
+	if(m_TerminalMenuOpen && (NewInput->m_PlayerFlags&PLAYERFLAG_SCOREBOARD))
+		GameServer()->CloseTerminalMenu(m_ClientID);
 
 	if(m_TerminalMenuOpen)
 	{
@@ -393,6 +402,8 @@ void CPlayer::SetLanguage(const char* pLanguage)
 
 void CPlayer::ResetScraps()
 {
+	for(int i = 0; i < m_vScraps.size(); i++)
+		delete m_vScraps[i];
 	m_vScraps.clear();
 	GameServer()->ResetVotes(GetCID());
 }
@@ -425,7 +436,11 @@ void CPlayer::EraseScrap(int ID)
 			continue;
 
 		if(s->m_ID == ID)
+		{
 			m_vScraps.remove(m_vScraps[i]);
+			delete s;
+			break;
+		}
 	}
 	GameServer()->ResetVotes(GetCID());
 }
@@ -452,8 +467,11 @@ void CPlayer::DropAllScrap(vec2 Pos, bool InShip)
 {
 	for (int i = 0; i < m_vScraps.size(); i++)
 	{
-		new CScrap(&GameServer()->m_World, 0, Pos, false, InShip, *m_vScraps[i]);
+		if(m_vScraps[i])
+			new CScrap(&GameServer()->m_World, 0, Pos, false, InShip, *m_vScraps[i]);
 	}
+	for (int i = 0; i < m_vScraps.size(); i++)
+		delete m_vScraps[i];
 	m_vScraps.clear();
 	GameServer()->ResetVotes(GetCID());
 }

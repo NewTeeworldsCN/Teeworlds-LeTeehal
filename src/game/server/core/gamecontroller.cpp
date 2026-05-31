@@ -788,6 +788,14 @@ void CGameController::Tick()
 			}
 			else if(Server()->Tick() - m_GameOverTick >= 0)
 			{
+				for(int i = 0; i < MAX_CLIENTS; i++)
+				{
+					if(!GameServer()->m_apPlayers[i])
+						continue;
+					if(GameServer()->m_apPlayers[i]->m_TerminalMenuOpen)
+						GameServer()->CloseTerminalMenu(i);
+				}
+				GameServer()->SendChatTarget(-1, _("正在返回飞船，地图切换中请稍候…"));
 				Server()->m_LocateGame = LOCATE_LOBBY;
 				str_copy(g_Config.m_SvMap, g_Config.m_SvMapLobby, sizeof(g_Config.m_SvMap));
 				GameServer()->Console()->ExecuteLine("reload", -1);
