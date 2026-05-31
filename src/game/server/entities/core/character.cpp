@@ -1128,7 +1128,7 @@ void CCharacter::PickupScrap()
 						GameServer()->CreateHammerHit(pDrop->m_Pos);
 						int Value = pDrop->GetScrapValue();
 						int Weight = pDrop->GetWeight();
-						int TotalWeight = GetPlayer()->GetBackpackWeight() + Weight;
+						int TotalWeight = GetPlayer()->GetBackpackWeight();
 						GameServer()->SendChatTarget(GetPlayer()->GetCID(), _("你捡起了{lstr:iname}，价值{int:value}元，重量{int:weight}镑（背包总重{int:total}镑）"), "iname", GameServer()->ScrapInfo()->GetScrapName(pDrop->GetScrapType()), "value", &Value, "weight", &Weight, "total", &TotalWeight);
 						pDrop->Reset();
                 	    return;
